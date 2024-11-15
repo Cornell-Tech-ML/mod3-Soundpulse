@@ -1,1 +1,0 @@
-"""Minitorch Module 3 Implementation."""
