@@ -170,7 +170,13 @@ def tensor_map(
         in_strides: Strides,
     ) -> None:
         
-        if (len(out_shape) == len(in_shape) and np.array_equal(out_shape, in_shape) and np.array_equal(out_strides, in_strides)):
+        stride_aligned = True
+        for i in range(len(out_strides)):
+            if out_strides[i] != in_strides[i]:
+                stride_aligned = False
+                break
+
+        if stride_aligned:
             for i in range(len(out)):
                 out[i] = fn(in_storage[i])
         else:
@@ -223,13 +229,13 @@ def tensor_zip(
         b_strides: Strides,
     ) -> None:
         
-        if (
-            len(out_shape) == len(a_shape) == len(b_shape)
-            and np.array_equal(out_shape, a_shape)
-            and np.array_equal(out_shape, b_shape)
-            and np.array_equal(out_strides, a_strides)
-            and np.array_equal(out_strides, b_strides)
-        ):
+        stride_aligned = True
+        for i in range(len(out_strides)):
+            if out_strides[i] != a_strides[i] or out_strides[i] != b_strides[i]:
+                stride_aligned = False
+                break
+
+        if stride_aligned:
             for i in range(len(out)):
                 out[i] = fn(a_storage[i], b_storage[i])
         else:
@@ -285,10 +291,17 @@ def tensor_reduce(
         for i in range(len(out)):
             to_index(i, out_shape, out_index)
             o = index_to_position(out_index, out_strides)
-            for s in range(reduce_size):
-                out_index[reduce_dim] = s
-                j = index_to_position(out_index, a_strides)
-                out[o] = fn(out[o], a_storage[j])
+
+            out_index[reduce_dim] = 0
+            j = index_to_position(out_index, a_strides)
+            current = a_storage[j]
+            
+            reduce_stride = a_strides[reduce_dim]
+            for s in range(1, reduce_size):
+                j += reduce_stride
+                current = fn(current, a_storage[j])
+            
+            out[o] = current
         # TODO: Implement for Task 3.1.
         #raise NotImplementedError("Need to implement for Task 3.1")
 
