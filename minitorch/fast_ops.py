@@ -180,8 +180,8 @@ def tensor_map(
             for i in prange(len(out)):
                 out[i] = fn(in_storage[i])
         else:
-            out_index: Index = np.zeros(MAX_DIMS, np.int16)
-            in_index: Index = np.zeros(MAX_DIMS, np.int16)
+            out_index: Index = np.zeros(MAX_DIMS, np.int32)
+            in_index: Index = np.zeros(MAX_DIMS, np.int32)
             for i in prange(len(out)):
                 to_index(i, out_shape, out_index)
                 broadcast_index(out_index, out_shape, in_shape, in_index)

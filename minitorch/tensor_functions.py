@@ -103,9 +103,8 @@ class Add(Function):
 
 class All(Function):
     @staticmethod
-    def forward(ctx: Context, a: Tensor, dim: Optional[Tensor] = None) -> Tensor:
+    def forward(ctx: Context, a: Tensor, dim: Tensor) -> Tensor:
         """Return 1 if all are true"""
-        ctx.save_for_backward(a)
         if dim is not None:
             return a.f.mul_reduce(a, int(dim.item()))
         else:
@@ -124,7 +123,7 @@ class All(Function):
 
 class Sum(Function):
     @staticmethod
-    def forward(ctx: Context, a: Tensor, dim: Optional[Tensor] = None) -> Tensor:
+    def forward(ctx: Context, a: Tensor, dim: Tensor) -> Tensor:
         """Computes the sum of the input tensor along the specified dimension."""
         ctx.save_for_backward(a.shape, dim)
         return a.f.add_reduce(a, int(dim.item()))
