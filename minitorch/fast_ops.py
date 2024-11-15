@@ -169,7 +169,14 @@ def tensor_map(
         in_shape: Shape,
         in_strides: Strides,
     ) -> None:
-        if all(o == i for o, i in zip(out_strides, in_strides)):
+        
+        stride_aligned = True
+        for i in range(len(out_strides)):
+            if out_strides[i] != in_strides[i]:
+                stride_aligned = False
+                break
+
+        if stride_aligned:
             for i in prange(len(out)):
                 out[i] = fn(in_storage[i])
         else:
@@ -221,7 +228,14 @@ def tensor_zip(
         b_shape: Shape,
         b_strides: Strides,
     ) -> None:
-        if all((o == a and o == b) for o, a, b in zip(out_strides, a_strides, b_strides)):
+        
+        stride_aligned = True
+        for i in range(len(out_strides)):
+            if out_strides[i] != a_strides[i] or out_strides[i] != b_strides[i]:
+                stride_aligned = False
+                break
+
+        if stride_aligned:
             for i in prange(len(out)):
                 out[i] = fn(a_storage[i], b_storage[i])
         else:
