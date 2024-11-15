@@ -169,7 +169,7 @@ def tensor_map(
         in_shape: Shape,
         in_strides: Strides,
     ) -> None:
-        if out_strides == in_strides:
+        if all(o == i for o, i in zip(out_strides, in_strides)):
             for i in prange(len(out)):
                 out[i] = fn(in_storage[i])
         else:
@@ -221,7 +221,7 @@ def tensor_zip(
         b_shape: Shape,
         b_strides: Strides,
     ) -> None:
-        if out_strides == a_strides and a_strides == b_strides:
+        if all((o == a and o == b) for o, a, b in zip(out_strides, a_strides, b_strides)):
             for i in prange(len(out)):
                 out[i] = fn(a_storage[i], b_storage[i])
         else:
