@@ -30,6 +30,7 @@ Fn = TypeVar("Fn")
 
 
 def njit(fn: Fn, **kwargs: Any) -> Fn:
+    """JIT compile a function with Numba."""
     return _njit(inline="always", **kwargs)(fn)  # type: ignore
 
 
@@ -168,8 +169,20 @@ def tensor_map(
         in_shape: Shape,
         in_strides: Strides,
     ) -> None:
+        if out_strides == in_strides:
+            for i in prange(len(out)):
+                out[i] = fn(in_storage[i])
+        else:
+            out_index: Index = np.zeros(MAX_DIMS, np.int16)
+            in_index: Index = np.zeros(MAX_DIMS, np.int16)
+            for i in prange(len(out)):
+                to_index(i, out_shape, out_index)
+                broadcast_index(out_index, out_shape, in_shape, in_index)
+                o = index_to_position(out_index, out_strides)
+                j = index_to_position(in_index, in_strides)
+                out[o] = fn(in_storage[j])
         # TODO: Implement for Task 3.1.
-        raise NotImplementedError("Need to implement for Task 3.1")
+        #raise NotImplementedError("Need to implement for Task 3.1")
 
     return njit(_map, parallel=True)  # type: ignore
 
@@ -208,8 +221,23 @@ def tensor_zip(
         b_shape: Shape,
         b_strides: Strides,
     ) -> None:
+        if out_strides == a_strides and a_strides == b_strides:
+            for i in prange(len(out)):
+                out[i] = fn(a_storage[i], b_storage[i])
+        else:
+            out_index: Index = np.zeros(MAX_DIMS, np.int32)
+            a_index: Index = np.zeros(MAX_DIMS, np.int32)
+            b_index: Index = np.zeros(MAX_DIMS, np.int32)
+            for i in prange(len(out)):
+                to_index(i, out_shape, out_index)
+                o = index_to_position(out_index, out_strides)
+                broadcast_index(out_index, out_shape, a_shape, a_index)
+                j = index_to_position(a_index, a_strides)
+                broadcast_index(out_index, out_shape, b_shape, b_index)
+                k = index_to_position(b_index, b_strides)
+                out[o] = fn(a_storage[j], b_storage[k])
         # TODO: Implement for Task 3.1.
-        raise NotImplementedError("Need to implement for Task 3.1")
+        #raise NotImplementedError("Need to implement for Task 3.1")
 
     return njit(_zip, parallel=True)  # type: ignore
 
@@ -244,8 +272,24 @@ def tensor_reduce(
         a_strides: Strides,
         reduce_dim: int,
     ) -> None:
+        out_index: Index = np.zeros(MAX_DIMS, np.int32)
+        reduce_size = a_shape[reduce_dim]
+        for i in prange(len(out)):
+            to_index(i, out_shape, out_index)
+            o = index_to_position(out_index, out_strides)
+
+            out_index[reduce_dim] = 0
+            j = index_to_position(out_index, a_strides)
+            current = a_storage[j]
+            
+            reduce_stride = a_strides[reduce_dim]
+            for s in range(1, reduce_size):
+                j += reduce_stride
+                current = fn(current, a_storage[j])
+            
+            out[o] = current
         # TODO: Implement for Task 3.1.
-        raise NotImplementedError("Need to implement for Task 3.1")
+        #raise NotImplementedError("Need to implement for Task 3.1")
 
     return njit(_reduce, parallel=True)  # type: ignore
 

@@ -5,6 +5,19 @@ from typing import List, Tuple
 
 
 def make_pts(N: int) -> List[Tuple[float, float]]:
+    """Generate N random points in the unit square [0, 1]^2.
+
+    Args:
+    ----
+        N (int): The number of points to generate.
+
+    Returns:
+    -------
+        List[Tuple[float, float]]: A list of N tuples, where each tuple contains
+            two float values representing the x and y coordinates of a point
+            in the unit square.
+
+    """
     X = []
     for i in range(N):
         x_1 = random.random()
@@ -21,6 +34,20 @@ class Graph:
 
 
 def simple(N: int) -> Graph:
+    """Generate a simple dataset with N points.
+
+    This function creates a dataset where points are classified based on their x-coordinate.
+    Points with x < 0.5 are labeled as 1, and points with x >= 0.5 are labeled as 0.
+
+    Args:
+    ----
+        N (int): The number of points to generate.
+
+    Returns:
+    -------
+        Graph: A Graph object containing N points, their coordinates, and labels.
+
+    """
     X = make_pts(N)
     y = []
     for x_1, x_2 in X:
@@ -30,6 +57,20 @@ def simple(N: int) -> Graph:
 
 
 def diag(N: int) -> Graph:
+    """Generate a diagonal dataset with N points.
+
+    This function creates a dataset where points are classified based on the sum of their coordinates.
+    Points with x1 + x2 < 0.5 are labeled as 1, and points with x1 + x2 >= 0.5 are labeled as 0.
+
+    Args:
+    ----
+        N (int): The number of points to generate.
+
+    Returns:
+    -------
+        Graph: A Graph object containing N points, their coordinates, and labels.
+
+    """
     X = make_pts(N)
     y = []
     for x_1, x_2 in X:
@@ -39,6 +80,20 @@ def diag(N: int) -> Graph:
 
 
 def split(N: int) -> Graph:
+    """Generate a split dataset with N points.
+
+    This function creates a dataset where points are classified based on their x-coordinate.
+    Points with x < 0.2 or x > 0.8 are labeled as 1, and points with 0.2 <= x <= 0.8 are labeled as 0.
+
+    Args:
+    ----
+        N (int): The number of points to generate.
+
+    Returns:
+    -------
+        Graph: A Graph object containing N points, their coordinates, and labels.
+
+    """
     X = make_pts(N)
     y = []
     for x_1, x_2 in X:
@@ -48,25 +103,68 @@ def split(N: int) -> Graph:
 
 
 def xor(N: int) -> Graph:
+    """Generate an XOR dataset with N points.
+
+    This function creates a dataset where points are classified based on their coordinates.
+    Points with (x < 0.5 and y > 0.5) or (x > 0.5 and y < 0.5) are labeled as 1, and other points are labeled as 0.
+
+    Args:
+    ----
+        N (int): The number of points to generate.
+
+    Returns:
+    -------
+        Graph: A Graph object containing N points, their coordinates, and labels.
+
+    """
     X = make_pts(N)
     y = []
     for x_1, x_2 in X:
-        y1 = 1 if ((x_1 < 0.5 and x_2 > 0.5) or (x_1 > 0.5 and x_2 < 0.5)) else 0
+        y1 = 1 if x_1 < 0.5 and x_2 > 0.5 or x_1 > 0.5 and x_2 < 0.5 else 0
         y.append(y1)
     return Graph(N, X, y)
 
 
 def circle(N: int) -> Graph:
+    """Generate a circular dataset with N points.
+
+    This function creates a dataset where points are classified based on their distance from the center (0.5, 0.5).
+    Points with a distance greater than sqrt(0.1) are labeled as 1, and points with a distance less than or equal to sqrt(0.1) are labeled as 0.
+
+    Args:
+    ----
+        N (int): The number of points to generate.
+
+    Returns:
+    -------
+        Graph: A Graph object containing N points, their coordinates, and labels.
+
+    """
     X = make_pts(N)
     y = []
     for x_1, x_2 in X:
-        x1, x2 = (x_1 - 0.5, x_2 - 0.5)
+        x1, x2 = x_1 - 0.5, x_2 - 0.5
         y1 = 1 if x1 * x1 + x2 * x2 > 0.1 else 0
         y.append(y1)
     return Graph(N, X, y)
 
 
 def spiral(N: int) -> Graph:
+    """Generate a spiral dataset with N points.
+
+    This function creates a dataset where points are arranged in two interleaving spirals.
+    The first half of the points belong to one spiral and are labeled as 0, and the second half belong to the other spiral and are labeled as 1.
+
+    Args:
+    ----
+        N (int): The number of points to generate.
+
+    Returns:
+    -------
+        Graph: A Graph object containing N points, their coordinates, and labels.
+
+    """
+
     def x(t: float) -> float:
         return t * math.cos(t) / 20.0
 
