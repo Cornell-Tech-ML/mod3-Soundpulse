@@ -162,23 +162,31 @@ def tensor_map(
     """
 
     def _map(
-        out: Storage,
-        out_shape: Shape,
-        out_strides: Strides,
-        in_storage: Storage,
-        in_shape: Shape,
-        in_strides: Strides,
+    out: Storage,
+    out_shape: Shape,
+    out_strides: Strides,
+    in_storage: Storage,
+    in_shape: Shape,
+    in_strides: Strides,
     ) -> None:
+        print("Out shape:", out_shape)
+        print("Out strides:", out_strides) 
+        print("In shape:", in_shape)
+        print("In strides:", in_strides)
+        print("In storage:", in_storage)
         
         stride_aligned = True
         for i in range(len(out_strides)):
             if out_strides[i] != in_strides[i]:
                 stride_aligned = False
                 break
+        
+        print("Stride aligned:", stride_aligned)
 
         if stride_aligned:
             for i in prange(len(out)):
                 out[i] = fn(in_storage[i])
+                print(f"Aligned - i:{i} in:{in_storage[i]} out:{out[i]}")
         else:
             out_index: Index = np.zeros(MAX_DIMS, np.int32)
             in_index: Index = np.zeros(MAX_DIMS, np.int32)
@@ -188,6 +196,7 @@ def tensor_map(
                 o = index_to_position(out_index, out_strides)
                 j = index_to_position(in_index, in_strides)
                 out[o] = fn(in_storage[j])
+                print(f"Non-aligned - i:{i} j:{j} o:{o} in:{in_storage[j]} out:{out[o]}")
         # TODO: Implement for Task 3.1.
         #raise NotImplementedError("Need to implement for Task 3.1")
 
