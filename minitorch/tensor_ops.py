@@ -7,13 +7,12 @@ from typing_extensions import Protocol
 
 from . import operators
 from .tensor_data import (
+    MAX_DIMS,
     broadcast_index,
     index_to_position,
     shape_broadcast,
     to_index,
 )
-
-MAX_DIMS = 32
 
 if TYPE_CHECKING:
     from .tensor import Tensor

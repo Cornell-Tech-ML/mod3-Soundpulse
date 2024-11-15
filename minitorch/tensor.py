@@ -10,7 +10,6 @@ import numpy as np
 from . import operators
 from .autodiff import Context, Variable, backpropagate
 from .tensor_data import TensorData
-from minitorch import tensor
 
 # Comment these out if not yet implemented
 from .tensor_functions import (
@@ -31,6 +30,7 @@ from .tensor_functions import (
     Sigmoid,
     Sum,
     View,
+    tensor,
 )
 
 if TYPE_CHECKING:
