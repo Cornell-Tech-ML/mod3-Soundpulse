@@ -162,41 +162,22 @@ def tensor_map(
     """
 
     def _map(
-    out: Storage,
-    out_shape: Shape,
-    out_strides: Strides,
-    in_storage: Storage,
-    in_shape: Shape,
-    in_strides: Strides,
+        out: Storage,
+        out_shape: Shape,
+        out_strides: Strides,
+        in_storage: Storage,
+        in_shape: Shape,
+        in_strides: Strides,
     ) -> None:
-        print("Out shape:", out_shape)
-        print("Out strides:", out_strides) 
-        print("In shape:", in_shape)
-        print("In strides:", in_strides)
-        print("In storage:", in_storage)
         
-        stride_aligned = True
-        for i in range(len(out_strides)):
-            if out_strides[i] != in_strides[i]:
-                stride_aligned = False
-                break
-        
-        print("Stride aligned:", stride_aligned)
-
-        if stride_aligned:
-            for i in prange(len(out)):
-                out[i] = fn(in_storage[i])
-                print(f"Aligned - i:{i} in:{in_storage[i]} out:{out[i]}")
-        else:
-            out_index: Index = np.zeros(MAX_DIMS, np.int32)
-            in_index: Index = np.zeros(MAX_DIMS, np.int32)
-            for i in prange(len(out)):
-                to_index(i, out_shape, out_index)
-                broadcast_index(out_index, out_shape, in_shape, in_index)
-                o = index_to_position(out_index, out_strides)
-                j = index_to_position(in_index, in_strides)
-                out[o] = fn(in_storage[j])
-                print(f"Non-aligned - i:{i} j:{j} o:{o} in:{in_storage[j]} out:{out[o]}")
+        out_index: Index = np.zeros(MAX_DIMS, np.int32)
+        in_index: Index = np.zeros(MAX_DIMS, np.int32)
+        for i in prange(len(out)):
+            to_index(i, out_shape, out_index)
+            broadcast_index(out_index, out_shape, in_shape, in_index)
+            o = index_to_position(out_index, out_strides)
+            j = index_to_position(in_index, in_strides)
+            out[o] = fn(in_storage[j])
         # TODO: Implement for Task 3.1.
         #raise NotImplementedError("Need to implement for Task 3.1")
 
@@ -238,27 +219,27 @@ def tensor_zip(
         b_strides: Strides,
     ) -> None:
         
-        stride_aligned = True
-        for i in range(len(out_strides)):
-            if out_strides[i] != a_strides[i] or out_strides[i] != b_strides[i]:
-                stride_aligned = False
-                break
+        # stride_aligned = True
+        # for i in range(len(out_strides)):
+        #     if out_strides[i] != a_strides[i] or out_strides[i] != b_strides[i]:
+        #         stride_aligned = False
+        #         break
 
-        if stride_aligned:
-            for i in prange(len(out)):
-                out[i] = fn(a_storage[i], b_storage[i])
-        else:
-            out_index: Index = np.zeros(MAX_DIMS, np.int32)
-            a_index: Index = np.zeros(MAX_DIMS, np.int32)
-            b_index: Index = np.zeros(MAX_DIMS, np.int32)
-            for i in prange(len(out)):
-                to_index(i, out_shape, out_index)
-                o = index_to_position(out_index, out_strides)
-                broadcast_index(out_index, out_shape, a_shape, a_index)
-                j = index_to_position(a_index, a_strides)
-                broadcast_index(out_index, out_shape, b_shape, b_index)
-                k = index_to_position(b_index, b_strides)
-                out[o] = fn(a_storage[j], b_storage[k])
+        # if stride_aligned:
+        #     for i in prange(len(out)):
+        #         out[i] = fn(a_storage[i], b_storage[i])
+        # else:
+        out_index: Index = np.zeros(MAX_DIMS, np.int32)
+        a_index: Index = np.zeros(MAX_DIMS, np.int32)
+        b_index: Index = np.zeros(MAX_DIMS, np.int32)
+        for i in prange(len(out)):
+            to_index(i, out_shape, out_index)
+            o = index_to_position(out_index, out_strides)
+            broadcast_index(out_index, out_shape, a_shape, a_index)
+            j = index_to_position(a_index, a_strides)
+            broadcast_index(out_index, out_shape, b_shape, b_index)
+            k = index_to_position(b_index, b_strides)
+            out[o] = fn(a_storage[j], b_storage[k])
         # TODO: Implement for Task 3.1.
         #raise NotImplementedError("Need to implement for Task 3.1")
 
