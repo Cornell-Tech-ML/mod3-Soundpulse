@@ -376,11 +376,11 @@ def _tensor_matrix_multiply(
         # A: [B, M, K]
         # B: [B, K, N]
         # out: [B, M, N]
-        acc = 0.0
+        temp = 0.0
         for k in range(a_shape[-1]):
-            acc += a_storage[a_pos + k * a_strides[-1]] * b_storage[b_pos + k * b_strides[-2]]
+            temp += a_storage[a_pos + k * a_strides[-1]] * b_storage[b_pos + k * b_strides[-2]]
         
-        out[p] = acc
+        out[p] = temp
 
     # TODO: Implement for Task 3.2.
     #raise NotImplementedError("Need to implement for Task 3.2")
