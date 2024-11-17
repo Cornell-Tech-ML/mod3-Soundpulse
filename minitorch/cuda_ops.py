@@ -401,14 +401,14 @@ def _mm_practice(out: Storage, a: Storage, b: Storage, size: int) -> None:
 
     """
     BLOCK_DIM = 32
-    cache_a = cuda.shared.array(BLOCK_DIM, numba.float64)
-    cache_b = cuda.shared.array(BLOCK_DIM, numba.float64)
+    cache_a = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
+    cache_b = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
     i = cuda.threadIdx.x
     j = cuda.threadIdx.y
 
     if i < size and j < size:
         cache_a[i, j] = a[size * i + j]
-        cache_b[i, j] = a[size * i + j]
+        cache_b[i, j] = b[size * i + j]
         cuda.syncthreads()
 
         temp = 0.0
