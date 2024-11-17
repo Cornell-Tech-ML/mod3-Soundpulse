@@ -29,8 +29,11 @@ class Network(minitorch.Module):
         self.layer3 = Linear(hidden, 1, backend)
 
     def forward(self, x):
+        h = self.layer1.forward(x).relu()
+        h = self.layer2.forward(h).relu()
+        return self.layer3.forward(h).sigmoid()
         # TODO: Implement for Task 3.5.
-        raise NotImplementedError("Need to implement for Task 3.5")
+        #raise NotImplementedError("Need to implement for Task 3.5")
 
 
 class Linear(minitorch.Module):
@@ -43,8 +46,9 @@ class Linear(minitorch.Module):
         self.out_size = out_size
 
     def forward(self, x):
+        return self.weights @ x + self.bias
         # TODO: Implement for Task 3.5.
-        raise NotImplementedError("Need to implement for Task 3.5")
+        #raise NotImplementedError("Need to implement for Task 3.5")
 
 
 class FastTrain:
