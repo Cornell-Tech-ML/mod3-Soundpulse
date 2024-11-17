@@ -187,7 +187,7 @@ def tensor_map(
                 in_positions[i] = index_to_position(in_index, in_strides)
 
             for i in prange(len(out)):
-                out[float(out_positions[i])] = fn(in_storage[float(in_positions[i])])
+                out[out_positions[i]] = fn(in_storage[in_positions[i]])
 
     return njit(_map, parallel=True)  # type: ignore
 
@@ -251,8 +251,8 @@ def tensor_zip(
                 b_positions[i] = index_to_position(b_index, b_strides)
 
             for i in prange(len(out)):
-                out[float(out_positions[i])] = fn(
-                    a_storage[float(a_positions[i])], b_storage[float(b_positions[i])]
+                out[out_positions[i]] = fn(
+                    a_storage[a_positions[i]], b_storage[b_positions[i]]
                 )
 
         # TODO: Implement for Task 3.1.
@@ -307,10 +307,10 @@ def tensor_reduce(
         # reduction logic
         for i in prange(len(out)):
             o = out_positions[i]
-            current = a_storage[float(reduced_positions[i, 0])]
+            current = a_storage[reduced_positions[i, 0]]
             # Inner loop
             for s in range(1, reduce_size):
-                current = fn(current, a_storage[float(reduced_positions[i, s])])
+                current = fn(current, a_storage[reduced_positions[i, s]])
             out[o] = current
         # TODO: Implement for Task 3.1.
         # raise NotImplementedError("Need to implement for Task 3.1")
