@@ -46,7 +46,7 @@ class Linear(minitorch.Module):
         self.out_size = out_size
 
     def forward(self, x):
-        return self.weights @ x + self.bias
+        return self.weights.value @ x + self.bias.value
         # TODO: Implement for Task 3.5.
         #raise NotImplementedError("Need to implement for Task 3.5")
 
