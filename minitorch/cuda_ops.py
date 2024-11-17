@@ -490,23 +490,37 @@ def _tensor_matrix_multiply(
     # TODO: Implement for Task 3.4.
     # raise NotImplementedError("Need to implement for Task 3.4")
 
-    if pi <= out_size[1] and pj <= out_size[2]:
-        a_pos = batch * a_batch_stride + pi * a_strides[-2] + pj * a_strides[-1]
-        b_pos = batch * b_batch_stride + pi * b_strides[-2] + pj * b_strides[-1]
+    # Calculate positions
+    m = j * BLOCK_DIM + pj
+    n = i * BLOCK_DIM + pi
+    # Get starting positions
+    a_pos = batch * a_batch_stride + m * a_strides[-2]
+    b_pos = batch * b_batch_stride + n * b_strides[-1]
 
-        a_shared[pi, pj] = a_storage[a_pos]
-        b_shared[pi, pj] = b_storage[b_pos]
-        cuda.syncthreads()
+    global_pos = batch * (out_shape[-1] * out_shape[-2]) + m * out_shape[-1] + n
 
-        # Calculate positions
+    if m < out_shape[-2] and n < out_shape[-1] and batch < out_shape[0]:
+
         temp = 0.0
-        for k in range(a_shape[-1]):
-            temp += (
-                a_shared[a_pos + k * a_strides[-1]]
-                * b_shared[b_pos + k * b_strides[-2]]
-            )
 
-        out[batch * out_strides[0] + i * out_strides[-2], j * out_strides[-1]] = temp
+        for tile in range(0, a_shape[-1], BLOCK_DIM):
+            a_pos = batch * a_batch_stride + m * a_strides[-2]
+            b_pos = batch * b_batch_stride + n * b_strides[-1]
+
+            if (tile + pi) < a_shape[-1]:
+                a_shared[pj, pi] = a_storage[a_pos + (tile + pi) * a_strides[-1]]
+                
+            if (tile + pj) < b_shape[-2]:
+                b_shared[pj, pi] = b_storage[b_pos + (tile + pj) * b_strides[-2]]
+
+            cuda.syncthreads()
+
+            for k in range(min(BLOCK_DIM, a_shape[-1] - tile)):
+                temp += a_shared[pj, k] * b_shared[k, pi]
+
+            cuda.syncthreads()
+
+            out[global_pos] = temp
 
 
 tensor_matrix_multiply = jit(_tensor_matrix_multiply)
