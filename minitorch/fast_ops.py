@@ -255,9 +255,6 @@ def tensor_zip(
                     float(a_storage[a_positions[i]]), float(b_storage[b_positions[i]])
                 )
 
-        # TODO: Implement for Task 3.1.
-        # raise NotImplementedError("Need to implement for Task 3.1")
-
     return njit(_zip, parallel=True)  # type: ignore
 
 
@@ -312,8 +309,6 @@ def tensor_reduce(
             for s in range(1, reduce_size):
                 current = fn(current, float(a_storage[reduced_positions[i, s]]))
             out[o] = current
-        # TODO: Implement for Task 3.1.
-        # raise NotImplementedError("Need to implement for Task 3.1")
 
     return njit(_reduce, parallel=True)  # type: ignore
 
@@ -390,9 +385,6 @@ def _tensor_matrix_multiply(
             )
 
         out[p] = temp
-
-    # TODO: Implement for Task 3.2.
-    # raise NotImplementedError("Need to implement for Task 3.2")
 
 
 tensor_matrix_multiply = njit(_tensor_matrix_multiply, parallel=True)
