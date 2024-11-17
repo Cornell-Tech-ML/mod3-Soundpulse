@@ -470,29 +470,36 @@ def _tensor_matrix_multiply(
     # Code Plan:
     # 1) Move across shared dimension by block dim.
     # Get starting positions
-    global_pos = batch * (out_shape[-1] * out_shape[-2]) + j * out_shape[-1] + i
 
     if j < out_shape[-2] and i < out_shape[-1] and batch < out_shape[0]:
 
         temp = 0.0
         # Move across shared dimension by block dim
         for tile in range(0, a_shape[-1], BLOCK_DIM):
-            a_pos = batch * a_batch_stride + j * a_strides[-2]
-            b_pos = batch * b_batch_stride + (tile + pj) * b_strides[-2]
-            # Load data into shared memory
-            if (tile + pi) < a_shape[-1] and j < out_shape[-2]:
-                a_shared[pj, pi] = a_storage[a_pos + (tile + pi) * a_strides[-1]]
-            if (tile + pj) < b_shape[-2] and i < out_shape[-1]:
-                b_shared[pj, pi] = b_storage[b_pos + i * b_strides[-1]]
+
+            a_col = tile + pi
+            if a_col < a_shape[-1]:
+                a_pos = batch * a_batch_stride + j * a_strides[-2] + a_col * a_strides[-1]
+                a_shared[pj, pi] = a_storage[a_pos]
+            else:
+                a_shared[pj, pi] = 0.0
+
+            b_row = tile + pj
+            if b_row < b_shape[-2]:
+                b_pos = batch * b_batch_stride + b_row * b_strides[-2] + i * b_strides[-1]
+                b_shared[pj, pi] = b_storage[b_pos]
+            else:
+                b_shared[pj, pi] = 0.0
 
             cuda.syncthreads()
 
             # c) Compute the dot produce for position c[i, j]
-            for k in range(min(BLOCK_DIM, a_shape[-1] - tile)):
+            for k in range(BLOCK_DIM):
                 temp += a_shared[pj, k] * b_shared[k, pi]
 
             cuda.syncthreads()
 
+        global_pos = batch * (out_shape[-1] * out_shape[-2]) + j * out_shape[-1] + i
         out[global_pos] = temp
 
 
