@@ -478,12 +478,12 @@ def _tensor_matrix_multiply(
         # Move across shared dimension by block dim
         for tile in range(0, a_shape[-1], BLOCK_DIM):
             a_pos = batch * a_batch_stride + j * a_strides[-2]
-            b_pos = batch * b_batch_stride + i * b_strides[-1]
+            b_pos = batch * b_batch_stride + (tile + pj) * b_strides[-2]
             # Load data into shared memory
             if (tile + pi) < a_shape[-1] and j < out_shape[-2]:
                 a_shared[pj, pi] = a_storage[a_pos + (tile + pi) * a_strides[-1]]
             if (tile + pj) < b_shape[-2] and i < out_shape[-1]:
-                b_shared[pj, pi] = b_storage[b_pos + (tile + pj) * b_strides[-2]]
+                b_shared[pj, pi] = b_storage[b_pos + i * b_strides[-1]]
 
             cuda.syncthreads()
 
