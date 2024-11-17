@@ -169,7 +169,9 @@ def tensor_map(
         in_shape: Shape,
         in_strides: Strides,
     ) -> None:
-        if (np.array_equal(out_strides, in_strides) and np.array_equal(out_shape, in_shape)):
+        if np.array_equal(out_strides, in_strides) and np.array_equal(
+            out_shape, in_shape
+        ):
             for i in prange(len(out)):
                 out[i] = fn(in_storage[i])
         else:
@@ -177,15 +179,15 @@ def tensor_map(
             in_index: Index = np.zeros(MAX_DIMS, np.int32)
             out_positions = np.zeros(len(out), np.int32)
             in_positions = np.zeros(len(out), np.int32)
-            
+
             for i in range(len(out)):
                 to_index(i, out_shape, out_index)
                 broadcast_index(out_index, out_shape, in_shape, in_index)
                 out_positions[i] = index_to_position(out_index, out_strides)
                 in_positions[i] = index_to_position(in_index, in_strides)
-                
+
             for i in prange(len(out)):
-                out[out_positions[i]] = fn(in_storage[in_positions[i]])
+                out[float(out_positions[i])] = fn(in_storage[float(in_positions[i])])
 
     return njit(_map, parallel=True)  # type: ignore
 
@@ -224,9 +226,12 @@ def tensor_zip(
         b_shape: Shape,
         b_strides: Strides,
     ) -> None:
-        
-        if (np.array_equal(out_strides, a_strides) and np.array_equal(out_strides, b_strides)
-            and np.array_equal(out_shape, a_shape) and np.array_equal(out_shape, b_shape)):
+        if (
+            np.array_equal(out_strides, a_strides)
+            and np.array_equal(out_strides, b_strides)
+            and np.array_equal(out_shape, a_shape)
+            and np.array_equal(out_shape, b_shape)
+        ):
             for i in prange(len(out)):
                 out[i] = fn(a_storage[i], b_storage[i])
         else:
@@ -236,7 +241,7 @@ def tensor_zip(
             out_positions = np.zeros(len(out), np.int32)
             a_positions = np.zeros(len(out), np.int32)
             b_positions = np.zeros(len(out), np.int32)
-            
+
             for i in range(len(out)):
                 to_index(i, out_shape, out_index)
                 broadcast_index(out_index, out_shape, a_shape, a_index)
@@ -244,12 +249,14 @@ def tensor_zip(
                 out_positions[i] = index_to_position(out_index, out_strides)
                 a_positions[i] = index_to_position(a_index, a_strides)
                 b_positions[i] = index_to_position(b_index, b_strides)
-                
+
             for i in prange(len(out)):
-                out[out_positions[i]] = fn(a_storage[a_positions[i]], b_storage[b_positions[i]])
+                out[float(out_positions[i])] = fn(
+                    a_storage[float(a_positions[i])], b_storage[float(b_positions[i])]
+                )
 
         # TODO: Implement for Task 3.1.
-        #raise NotImplementedError("Need to implement for Task 3.1")
+        # raise NotImplementedError("Need to implement for Task 3.1")
 
     return njit(_zip, parallel=True)  # type: ignore
 
@@ -287,7 +294,7 @@ def tensor_reduce(
         out_index: Index = np.zeros(MAX_DIMS, np.int32)
         out_positions = np.zeros(len(out), np.int32)
         reduced_positions = np.zeros((len(out), a_shape[reduce_dim]), np.int32)
-        
+
         reduce_size = a_shape[reduce_dim]
         # first buffer the positions
         for i in range(len(out)):
@@ -296,17 +303,17 @@ def tensor_reduce(
             for s in range(reduce_size):
                 out_index[reduce_dim] = s
                 reduced_positions[i, s] = index_to_position(out_index, a_strides)
-        
+
         # reduction logic
         for i in prange(len(out)):
             o = out_positions[i]
-            current = a_storage[reduced_positions[i, 0]]
+            current = a_storage[float(reduced_positions[i, 0])]
             # Inner loop
             for s in range(1, reduce_size):
-                current = fn(current, a_storage[reduced_positions[i, s]])
+                current = fn(current, a_storage[float(reduced_positions[i, s])])
             out[o] = current
         # TODO: Implement for Task 3.1.
-        #raise NotImplementedError("Need to implement for Task 3.1")
+        # raise NotImplementedError("Need to implement for Task 3.1")
 
     return njit(_reduce, parallel=True)  # type: ignore
 
@@ -361,14 +368,13 @@ def _tensor_matrix_multiply(
 
     # Main parallel loop
     for p in prange(len(out)):
-
         # Calculate positions
-        m = (p // out_shape[-1]) % out_shape[-2]  
+        m = (p // out_shape[-1]) % out_shape[-2]
         n = p % out_shape[-1]
 
         # Positions per movement: R * C
         batch = p // (out_shape[-1] * out_shape[-2])
-        
+
         # Get starting positions
         a_pos = batch * a_batch_stride + m * a_strides[-2]
         b_pos = batch * b_batch_stride + n * b_strides[-1]
@@ -378,12 +384,15 @@ def _tensor_matrix_multiply(
         # out: [B, M, N]
         temp = 0.0
         for k in range(a_shape[-1]):
-            temp += a_storage[a_pos + k * a_strides[-1]] * b_storage[b_pos + k * b_strides[-2]]
-        
+            temp += (
+                a_storage[a_pos + k * a_strides[-1]]
+                * b_storage[b_pos + k * b_strides[-2]]
+            )
+
         out[p] = temp
 
     # TODO: Implement for Task 3.2.
-    #raise NotImplementedError("Need to implement for Task 3.2")
+    # raise NotImplementedError("Need to implement for Task 3.2")
 
 
 tensor_matrix_multiply = njit(_tensor_matrix_multiply, parallel=True)

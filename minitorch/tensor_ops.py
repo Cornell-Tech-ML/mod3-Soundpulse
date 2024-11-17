@@ -49,7 +49,7 @@ class TensorOps:
     def matrix_multiply(a: Tensor, b: Tensor) -> Tensor:
         """Matrix multiply"""
         ...
-        #raise NotImplementedError("Not implemented in this assignment")
+        # raise NotImplementedError("Not implemented in this assignment")
 
     cuda = False
 
@@ -253,8 +253,8 @@ class SimpleOps(TensorOps):
         if both_2d:
             out = out.view(out.shape[1], out.shape[2])
         return out
-        #raise NotImplementedError("Not implemented in this assignment")
-        
+        # raise NotImplementedError("Not implemented in this assignment")
+
     is_cuda = False
 
 
@@ -407,8 +407,9 @@ def tensor_reduce(
                 out_index[reduce_dim] = s
                 j = index_to_position(out_index, a_strides)
                 out[o] = fn(out[o], a_storage[j])
-                
+
     return _reduce
+
 
 def tensor_matrix_multiply(
     out: Storage,
@@ -421,7 +422,7 @@ def tensor_matrix_multiply(
     b_shape: Shape,
     b_strides: Strides,
 ) -> None:
-    """basic tensor matrix multiply function.
+    """Basic tensor matrix multiply function.
 
     Should work for any tensor shapes that broadcast as long as
 
@@ -453,14 +454,13 @@ def tensor_matrix_multiply(
 
     # Main loop
     for p in range(len(out)):
-
         # Calculate positions
-        m = (p // out_shape[-1]) % out_shape[-2]  
+        m = (p // out_shape[-1]) % out_shape[-2]
         n = p % out_shape[-1]
 
         # Positions per movement: R * C
         batch = p // (out_shape[-1] * out_shape[-2])
-        
+
         # Get starting positions
         a_pos = batch * a_batch_stride + m * a_strides[-2]
         b_pos = batch * b_batch_stride + n * b_strides[-1]
@@ -470,10 +470,12 @@ def tensor_matrix_multiply(
         # out: [B, M, N]
         temp = 0.0
         for k in range(a_shape[-1]):
-            temp += a_storage[a_pos + k * a_strides[-1]] * b_storage[b_pos + k * b_strides[-2]]
-        
+            temp += (
+                a_storage[a_pos + k * a_strides[-1]]
+                * b_storage[b_pos + k * b_strides[-2]]
+            )
+
         out[p] = temp
 
 
 SimpleBackend = TensorBackend(SimpleOps)
-

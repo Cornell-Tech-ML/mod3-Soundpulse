@@ -14,7 +14,7 @@ from .autodiff import Context
 from .tensor_ops import SimpleBackend, TensorBackend
 
 if TYPE_CHECKING:
-    from typing import Any, List, Tuple, Optional, Union
+    from typing import Any, List, Tuple
 
     from .tensor import Tensor
     from .tensor_data import UserIndex, UserShape
@@ -129,9 +129,7 @@ class Sum(Function):
         return a.f.add_reduce(a, int(dim.item()))
 
     @staticmethod
-    def backward(
-        ctx: Context, grad_output: Tensor
-    ) -> Tuple[Tensor, float]:
+    def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, float]:
         """Computes the gradient for the sum operation."""
         a_shape, dim = ctx.saved_values
         return grad_output, 0.0
@@ -167,7 +165,6 @@ class Sigmoid(Function):
         """Computes the gradient for the sigmoid operation."""
         sigma: Tensor = ctx.saved_values[0]
         return sigma * (-sigma + 1.0) * grad_output
-
 
 
 class ReLU(Function):

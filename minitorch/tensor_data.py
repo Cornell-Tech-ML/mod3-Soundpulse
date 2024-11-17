@@ -104,6 +104,7 @@ def broadcast_index(
             out_index[i] = 0
     return None
 
+
 def shape_broadcast(shape1: UserShape, shape2: UserShape) -> UserShape:
     """Broadcast two shapes to create a new union shape.
 
@@ -140,6 +141,7 @@ def shape_broadcast(shape1: UserShape, shape2: UserShape) -> UserShape:
             if b_rev[i] != c_rev[i] and b_rev[i] != 1:
                 raise IndexingError(f"Broadcast failure {a} {b}")
     return tuple(reversed(c_rev))
+
 
 def strides_from_shape(shape: UserShape) -> UserStrides:
     """Return a contiguous stride for a shape"""
@@ -280,9 +282,9 @@ class TensorData:
         return TensorData(
             self._storage,
             tuple([self.shape[o] for o in order]),
-            tuple([self._strides[o] for o in order])
+            tuple([self._strides[o] for o in order]),
         )
-    
+
     def to_string(self) -> str:
         """Convert to string"""
         s = ""
