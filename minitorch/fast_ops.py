@@ -173,7 +173,7 @@ def tensor_map(
             out_shape, in_shape
         ):
             for i in prange(len(out)):
-                out[i] = fn(in_storage[i])
+                out[i] = fn(float(in_storage[i]))
         else:
             out_index: Index = np.zeros(MAX_DIMS, np.int32)
             in_index: Index = np.zeros(MAX_DIMS, np.int32)
@@ -187,7 +187,7 @@ def tensor_map(
                 in_positions[i] = index_to_position(in_index, in_strides)
 
             for i in prange(len(out)):
-                out[out_positions[i]] = fn(in_storage[in_positions[i]])
+                out[out_positions[i]] = fn(float(in_storage[in_positions[i]]))
 
     return njit(_map, parallel=True)  # type: ignore
 
@@ -233,7 +233,7 @@ def tensor_zip(
             and np.array_equal(out_shape, b_shape)
         ):
             for i in prange(len(out)):
-                out[i] = fn(a_storage[i], b_storage[i])
+                out[i] = fn(float(a_storage[i]), float(b_storage[i]))
         else:
             out_index: Index = np.zeros(MAX_DIMS, np.int32)
             a_index: Index = np.zeros(MAX_DIMS, np.int32)
@@ -252,7 +252,7 @@ def tensor_zip(
 
             for i in prange(len(out)):
                 out[out_positions[i]] = fn(
-                    a_storage[a_positions[i]], b_storage[b_positions[i]]
+                    float(a_storage[a_positions[i]]), float(b_storage[b_positions[i]])
                 )
 
         # TODO: Implement for Task 3.1.
@@ -307,10 +307,10 @@ def tensor_reduce(
         # reduction logic
         for i in prange(len(out)):
             o = out_positions[i]
-            current = a_storage[reduced_positions[i, 0]]
+            current = float(a_storage[reduced_positions[i, 0]])
             # Inner loop
             for s in range(1, reduce_size):
-                current = fn(current, a_storage[reduced_positions[i, s]])
+                current = fn(current, float(a_storage[reduced_positions[i, s]]))
             out[o] = current
         # TODO: Implement for Task 3.1.
         # raise NotImplementedError("Need to implement for Task 3.1")
