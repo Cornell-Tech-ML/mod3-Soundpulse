@@ -475,16 +475,21 @@ def _tensor_matrix_multiply(
 
     if j < out_shape[-2] and i < out_shape[-1] and batch < out_shape[0]:
 
-        a_pos = batch * a_batch_stride + j * a_strides[-2]
-        b_pos = batch * b_batch_stride + i * b_strides[-1]
-
         temp = 0.0
         # Move across shared dimension by block dim
         for tile in range(0, a_shape[-1], BLOCK_DIM):
+
+            a_shared[pj, pi] = 0.0
+            b_shared[pj, pi] = 0.0
+            cuda.syncthreads()
+
+            a_pos = batch * a_batch_stride + j * a_strides[-2]
+            b_pos = batch * b_batch_stride + i * b_strides[-1]
+
             # Load data into shared memory
-            if (tile + pi) < a_shape[-1]:
+            if (tile + pi) < a_shape[-1] and j < out_shape[-2]:
                 a_shared[pj, pi] = a_storage[a_pos + (tile + pi) * a_strides[-1]]
-            if (tile + pj) < b_shape[-2]:
+            if (tile + pj) < b_shape[-2] and i < out_shape[-1]:
                 b_shared[pj, pi] = b_storage[b_pos + (tile + pj) * b_strides[-2]]
 
             cuda.syncthreads()
