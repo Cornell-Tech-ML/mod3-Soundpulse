@@ -461,10 +461,10 @@ def tensor_matrix_multiply(
         # Positions per movement: R * C
         batch = p // (out_shape[-1] * out_shape[-2])
 
-        batch_a = batch if len(a_shape) > 2 and a_shape[0] > 1 else 0
-        batch_b = batch if len(b_shape) > 2 and b_shape[0] > 1 else 0
-
         # Get starting positions
+        batch_a = batch if a_shape[0] > 1 else 0
+        batch_b = batch if b_shape[0] > 1 else 0
+        
         a_pos = batch_a * a_batch_stride + m * a_strides[-2]
         b_pos = batch_b * b_batch_stride + n * b_strides[-1]
 

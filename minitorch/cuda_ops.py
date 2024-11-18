@@ -460,15 +460,12 @@ def _tensor_matrix_multiply(
     b_shared = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
 
     # The final position c[i, j]
-    i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
-    j = cuda.blockIdx.y * cuda.blockDim.y + cuda.threadIdx.y
+    i = cuda.blockIdx.x * BLOCK_DIM + cuda.threadIdx.x
+    j = cuda.blockIdx.y * BLOCK_DIM + cuda.threadIdx.y
 
     # The local position in the block.
     tx = cuda.threadIdx.x 
     ty = cuda.threadIdx.y 
-
-    i = cuda.blockIdx.x * BLOCK_DIM + tx
-    j = cuda.blockIdx.y * BLOCK_DIM + ty
 
     # Code Plan:
     # 1) Move across shared dimension by block dim.
