@@ -342,17 +342,25 @@ def tensor_reduce(
 
         out_position = index_to_position(out_index, out_strides)
 
+        reduce_size = a_shape[reduce_dim]
+        offset = 1
+        if pos < reduce_size:
+            out_index[reduce_dim] = pos
+            cache[pos] = a_storage[index_to_position(out_index, a_strides)]
+        else:
+            cache[pos] = reduce_value
+
+        while offset < BLOCK_DIM:
+            numba.cuda.syncthreads()
+            if pos % (offset * 2) == 0:
+                cache[pos] = fn(
+                    cache[pos], cache[pos + offset]
+                )
+            offset *= 2
+
+        numba.cuda.syncthreads()
         if pos == 0:
-            out_index[reduce_dim] = 0
-            curr_pos = index_to_position(out_index, a_strides)
-            cache[0] = a_storage[curr_pos]
-
-            for s in range(1, a_shape[reduce_dim]):
-                out_index[reduce_dim] = s
-                curr_pos = index_to_position(out_index, a_strides)
-                cache[0] = fn(cache[0], a_storage[curr_pos])
-
-            out[out_position] = cache[0]
+            out[out_position] = cache[pos]
 
     return jit(_reduce)  # type: ignore
 
