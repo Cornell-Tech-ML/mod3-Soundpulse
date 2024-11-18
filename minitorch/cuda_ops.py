@@ -484,8 +484,9 @@ def _tensor_matrix_multiply(
         else:
             a_shared[ty, tx] = 0.0 
 
-        if b_row < b_shape[1] and i < b_shape[2]:
-            b_pos = b_row * b_strides[1] + i * b_strides[2]
+        b_batch = 0 if b_shape[0] == 1 else batch
+        if b_batch < b_shape[0] and b_row < b_shape[1] and i < b_shape[2]:
+            b_pos = b_batch * b_batch_stride + b_row * b_strides[1] + i * b_strides[2]
             b_shared[ty, tx] = b_storage[b_pos]
         else:
             b_shared[ty, tx] = 0.0
