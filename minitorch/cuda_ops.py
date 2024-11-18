@@ -471,7 +471,7 @@ def _tensor_matrix_multiply(
     # 1) Move across shared dimension by block dim.
     # Get starting positions
     temp = 0.0
-    num_tiles = (a_shape[-1] + BLOCK_DIM - 1)
+    num_tiles = (a_shape[-1] + BLOCK_DIM - 1) // BLOCK_DIM
 
     for tile_idx in range(num_tiles):
 
@@ -502,7 +502,7 @@ def _tensor_matrix_multiply(
         cuda.syncthreads()
 
     if batch < out_shape[0] and j < out_shape[-2] and i < out_shape[-1]:
-        out_pos = batch * out_shape[-2] * out_shape[-1] + j * out_shape[-1] + i
+        out_pos = batch * out_strides[0] + j * out_strides[-2] + i * out_strides[-1]
         out[out_pos] = temp
 
 tensor_matrix_multiply = jit(_tensor_matrix_multiply)
