@@ -452,7 +452,6 @@ def tensor_matrix_multiply(
     a_batch_stride = a_strides[0] if a_shape[0] > 1 else 0
     b_batch_stride = b_strides[0] if b_shape[0] > 1 else 0
 
-    raise NotImplementedError("Need to implement for Task 2.5")
     # Main loop
     for p in range(len(out)):
         # Calculate positions
@@ -463,11 +462,8 @@ def tensor_matrix_multiply(
         batch = p // (out_shape[-1] * out_shape[-2])
 
         # Get starting positions
-        batch_a = batch if a_shape[0] > 1 else 0
-        batch_b = batch if b_shape[0] > 1 else 0
-        
-        a_pos = batch_a * a_batch_stride + m * a_strides[-2]
-        b_pos = batch_b * b_batch_stride + n * b_strides[-1]
+        a_pos = batch * a_batch_stride + m * a_strides[-2]
+        b_pos = batch * b_batch_stride + n * b_strides[-1]
 
         # A: [B, M, K]
         # B: [B, K, N]

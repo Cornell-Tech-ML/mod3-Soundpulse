@@ -477,15 +477,19 @@ def _tensor_matrix_multiply(
 
         a_col = tile_idx * BLOCK_DIM + tx
         b_row = tile_idx * BLOCK_DIM + ty
+        
+        # Dealing with broadcasting
+        batch_a = batch if a_shape[0] > 1 else 0
+        batch_b = batch if b_shape[0] > 1 else 0
 
         if batch < a_shape[0] and j < a_shape[-2] and a_col < a_shape[-1]:
-            a_pos = batch * a_batch_stride + j * a_strides[-2] + a_col * a_strides[-1]
+            a_pos = batch_a * a_batch_stride + j * a_strides[-2] + a_col * a_strides[-1]
             a_shared[ty, tx] = a_storage[a_pos]
         else:
             a_shared[ty, tx] = 0.0 
 
         if batch < b_shape[0] and b_row < b_shape[-2] and i < b_shape[-1]:
-            b_pos = batch * b_batch_stride + b_row * b_strides[-2] + i * b_strides[-1]
+            b_pos = batch_b * b_batch_stride + b_row * b_strides[-2] + i * b_strides[-1]
             b_shared[ty, tx] = b_storage[b_pos]
         else:
             b_shared[ty, tx] = 0.0
