@@ -464,43 +464,44 @@ def _tensor_matrix_multiply(
     j = cuda.blockIdx.y * cuda.blockDim.y + cuda.threadIdx.y
 
     # The local position in the block.
-    pi = cuda.threadIdx.x
-    pj = cuda.threadIdx.y
+    tx = cuda.threadIdx.x 
+    ty = cuda.threadIdx.y 
+
+    i = cuda.blockIdx.x * BLOCK_DIM + tx
+    j = cuda.blockIdx.y * BLOCK_DIM + ty
 
     # Code Plan:
     # 1) Move across shared dimension by block dim.
     # Get starting positions
+    temp = 0.0
+    num_tiles = (a_shape[-1] + BLOCK_DIM - 1)
 
-    if j < out_shape[-2] and i < out_shape[-1] and batch < out_shape[0]:
+    for tile_idx in range(num_tiles):
 
-        temp = 0.0
-        # Move across shared dimension by block dim
-        for tile in range(0, a_shape[-1], BLOCK_DIM):
+        a_col = tile_idx * BLOCK_DIM + tx
+        b_row = tile_idx * BLOCK_DIM + ty
 
-            a_col = tile + pi
-            if a_col < a_shape[-1]:
-                a_pos = batch * a_batch_stride + j * a_strides[-2] + a_col * a_strides[-1]
-                a_shared[pj, pi] = a_storage[a_pos]
-            else:
-                a_shared[pj, pi] = 0.0
+        if batch < a_shape[0] and j < a_shape[-2] and a_col < a_shape[-1]:
+            a_pos = batch * a_batch_stride + j * a_strides[-2] + a_col * a_strides[-1]
+            a_shared[ty, tx] = a_storage[a_pos]
+        else:
+            a_shared[ty, tx] = 0.0 
 
-            b_row = tile + pj
-            if b_row < b_shape[-2]:
-                b_pos = batch * b_batch_stride + b_row * b_strides[-2] + i * b_strides[-1]
-                b_shared[pj, pi] = b_storage[b_pos]
-            else:
-                b_shared[pj, pi] = 0.0
+        if batch < b_shape[0] and b_row < b_shape[-2] and i < b_shape[-1]:
+            b_pos = batch * b_batch_stride + b_row * b_strides[-2] + i * b_strides[-1]
+            b_shared[ty, tx] = b_storage[b_pos]
+        else:
+            b_shared[ty, tx] = 0.0
 
-            cuda.syncthreads()
+        cuda.syncthreads()
 
-            # c) Compute the dot produce for position c[i, j]
-            for k in range(BLOCK_DIM):
-                temp += a_shared[pj, k] * b_shared[k, pi]
+        for k in range(BLOCK_DIM):
+            if (tile_idx * BLOCK_DIM + k) < a_shape[-1]:
+                temp += a_shared[ty, k] * b_shared[k, tx]
+        cuda.syncthreads()
 
-            cuda.syncthreads()
-
-        global_pos = batch * (out_shape[-1] * out_shape[-2]) + j * out_shape[-1] + i
-        out[global_pos] = temp
-
+    if batch < out_shape[0] and j < out_shape[-2] and i < out_shape[-1]:
+        out_pos = batch * out_shape[-2] * out_shape[-1] + j * out_shape[-1] + i
+        out[out_pos] = temp
 
 tensor_matrix_multiply = jit(_tensor_matrix_multiply)
