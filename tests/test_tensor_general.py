@@ -375,12 +375,10 @@ def test_bmm(backend: str, data: DataObject) -> None:
     
     print("\nInput tensor a:")
     print("Shape:", a.shape)
-    print("Strides:", a.strides)
     print("Values:\n", a)
     
     print("\nInput tensor b:")
     print("Shape:", b.shape)
-    print("Strides:", b.strides)
     print("Values:\n", b)
     
     c = a @ b
