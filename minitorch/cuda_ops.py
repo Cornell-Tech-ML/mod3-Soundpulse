@@ -471,38 +471,34 @@ def _tensor_matrix_multiply(
     # 1) Move across shared dimension by block dim.
     # Get starting positions
     temp = 0.0
-    num_tiles = (a_shape[-1] + BLOCK_DIM - 1) // BLOCK_DIM
+    num_tiles = (a_shape[2] + BLOCK_DIM - 1) // BLOCK_DIM
 
     for tile_idx in range(num_tiles):
 
         a_col = tile_idx * BLOCK_DIM + tx
         b_row = tile_idx * BLOCK_DIM + ty
-        
-        # Dealing with broadcasting
-        batch_a = batch if a_shape[0] > 1 else 0
-        batch_b = batch if b_shape[0] > 1 else 0
 
-        if batch < a_shape[0] and j < a_shape[-2] and a_col < a_shape[-1]:
-            a_pos = batch_a * a_batch_stride + j * a_strides[-2] + a_col * a_strides[-1]
+        if batch < a_shape[0] and j < a_shape[1] and a_col < a_shape[2]:
+            a_pos = batch * a_batch_stride + j * a_strides[1] + a_col * a_strides[2]
             a_shared[ty, tx] = a_storage[a_pos]
         else:
             a_shared[ty, tx] = 0.0 
 
-        if batch < b_shape[0] and b_row < b_shape[-2] and i < b_shape[-1]:
-            b_pos = batch_b * b_batch_stride + b_row * b_strides[-2] + i * b_strides[-1]
-            b_shared[ty, tx] = b_storage[b_pos]
+        if batch < b_shape[0] and b_row < b_shape[1] and i < b_shape[2]:
+            b_pos = batch * b_batch_stride + b_row * b_strides[1] + i * b_strides[2]
+            b_shared[tx, ty] = b_storage[b_pos]
         else:
-            b_shared[ty, tx] = 0.0
+            b_shared[tx, ty] = 0.0
 
         cuda.syncthreads()
 
         for k in range(BLOCK_DIM):
-            if (tile_idx * BLOCK_DIM + k) < a_shape[-1]:
+            if (tile_idx * BLOCK_DIM + k) < a_shape[2]:
                 temp += a_shared[ty, k] * b_shared[k, tx]
         cuda.syncthreads()
 
-    if batch < out_shape[0] and j < out_shape[-2] and i < out_shape[-1]:
-        out_pos = batch * out_strides[0] + j * out_strides[-2] + i * out_strides[-1]
+    if batch < out_shape[0] and j < out_shape[1] and i < out_shape[2]:
+        out_pos = batch * out_strides[0] + j * out_strides[1] + i * out_strides[2]
         out[out_pos] = temp
 
 tensor_matrix_multiply = jit(_tensor_matrix_multiply)
