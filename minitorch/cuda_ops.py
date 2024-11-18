@@ -475,7 +475,7 @@ def _tensor_matrix_multiply(
 
     for tile_idx in range(num_tiles):
 
-        a_col = tile_idx * BLOCK_DIM + tx
+        a_col = tile_idx * BLOCK_DIM + tx  
         b_row = tile_idx * BLOCK_DIM + ty
 
         if batch < a_shape[0] and j < a_shape[1] and a_col < a_shape[2]:
@@ -486,9 +486,9 @@ def _tensor_matrix_multiply(
 
         if batch < b_shape[0] and b_row < b_shape[1] and i < b_shape[2]:
             b_pos = batch * b_batch_stride + b_row * b_strides[1] + i * b_strides[2]
-            b_shared[tx, ty] = b_storage[b_pos]
+            b_shared[ty, tx] = b_storage[b_pos]
         else:
-            b_shared[tx, ty] = 0.0
+            b_shared[ty, tx] = 0.0
 
         cuda.syncthreads()
 

@@ -368,13 +368,44 @@ def test_bmm(backend: str, data: DataObject) -> None:
         data.draw(small_ints),
         data.draw(small_ints),
     )
+    print("\nDimensions:", f"D={D}, A={A}, B={B}, C={C}")
+    
     a = data.draw(tensors(backend=shared[backend], shape=(D, A, B)))
     b = data.draw(tensors(backend=shared[backend], shape=(1, B, C)))
-
+    
+    print("\nInput tensor a:")
+    print("Shape:", a.shape)
+    print("Strides:", a.strides)
+    print("Values:\n", a)
+    
+    print("\nInput tensor b:")
+    print("Shape:", b.shape)
+    print("Strides:", b.strides)
+    print("Values:\n", b)
+    
     c = a @ b
     c2 = (
         (a.contiguous().view(D, A, B, 1) * b.contiguous().view(1, 1, B, C))
         .sum(2)
         .view(D, A, C)
     )
+    
+    print("\nOutput tensor c (actual):")
+    print("Shape:", c.shape)
+    print("Values:\n", c)
+    
+    print("\nOutput tensor c2 (expected):")
+    print("Shape:", c2.shape)
+    print("Values:\n", c2)
+    
+    print("\nDifference (c - c2):")
+    print(c - c2)
+    
+    # Print broadcasting debug info
+    print("\nBroadcasting debug:")
+    print("a contiguous view shape:", (D, A, B, 1))
+    print("b contiguous view shape:", (1, 1, B, C))
+    print("Intermediate multiplication shape:", (D, A, B, C))
+    print("After sum(2) shape:", (D, A, C))
+    
     assert_close_tensor(c, c2)
