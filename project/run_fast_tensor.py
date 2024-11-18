@@ -13,7 +13,7 @@ if numba.cuda.is_available():
 
 
 def default_log_fn(epoch, total_loss, correct, losses, time, batch_size):
-    print("Epoch ", epoch, " loss ", total_loss, "correct", correct, "duration per Epoch:", round(time/batch_size,3), "seconds")
+    print("Epoch ", epoch, " loss ", total_loss, "correct", correct, "duration per Epoch:", round(time,3), "seconds")
 
 
 def RParam(*shape, backend):
@@ -104,7 +104,7 @@ class FastTrain:
                 out = self.model.forward(X).view(y.shape[0])
                 y2 = minitorch.tensor(data.y)
                 correct = int(((out.detach() > 0.5) == y2).sum()[0])
-                log_fn(epoch, total_loss, correct, losses, (tik - tok), BATCH)
+                log_fn(epoch, total_loss, correct, losses, (tok - tik), BATCH)
                 tik = time.time()
 
 
