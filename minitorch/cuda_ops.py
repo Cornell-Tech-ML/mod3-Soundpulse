@@ -230,11 +230,12 @@ def tensor_zip(
             b_index = cuda.local.array(MAX_DIMS, numba.int32)
 
             to_index(i, out_shape, out_index)
-            o = index_to_position(out_index, out_strides)
             broadcast_index(out_index, out_shape, a_shape, a_index)
-            j = index_to_position(a_index, a_strides)
             broadcast_index(out_index, out_shape, b_shape, b_index)
+            
+            j = index_to_position(a_index, a_strides)
             k = index_to_position(b_index, b_strides)
+            o = index_to_position(out_index, out_strides)
             out[o] = fn(a_storage[j], b_storage[k])
 
     return cuda.jit()(_zip)  # type: ignore
