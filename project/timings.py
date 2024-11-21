@@ -4,6 +4,7 @@ import minitorch
 import time
 import sys
 import numpy as np
+import matplotlib.pyplot as plt
 
 FastTensorBackend = minitorch.TensorBackend(minitorch.FastOps)
 GPUBackend = minitorch.TensorBackend(minitorch.CudaOps)
@@ -49,9 +50,23 @@ if __name__ == "__main__":
         times[size]["gpu"] = np.mean(gpu_times)
         print(times[size])
 
-    print()
-    print("Timing summary")
-    for size, stimes in times.items():
-        print(f"Size: {size}")
-        for b, t in stimes.items():
-            print(f"    {b}: {t:.5f}")
+    sizes = list(times.keys())
+    fast_times = [times[size]['fast'] for size in sizes]
+    gpu_times = [times[size]['gpu'] for size in sizes]
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(sizes, fast_times, 'o-', label='CPU Backend')
+    plt.plot(sizes, gpu_times, 'o-', label='GPU Backend')
+    plt.xlabel('Matrix Size')
+    plt.ylabel('Time (seconds)')
+    plt.title('MatMul Performance Comparison')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+    # print()
+    # print("Timing summary")
+    # for size, stimes in times.items():
+    #     print(f"Size: {size}")
+    #     for b, t in stimes.items():
+    #         print(f"    {b}: {t:.5f}")
