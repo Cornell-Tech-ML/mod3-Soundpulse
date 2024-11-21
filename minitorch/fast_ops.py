@@ -246,7 +246,7 @@ def tensor_zip(
                 broadcast_index(out_index, out_shape, b_shape, b_index)
                 b = index_to_position(b_index, b_strides)
 
-                out[index] = fn(float(a), float(b))
+                out[index] = fn(a, b)
 
     return njit(_zip, parallel=True)  # type: ignore
 
