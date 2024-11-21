@@ -11,6 +11,37 @@ def RParam(*shape):
     r = 2 * (minitorch.rand(shape) - 0.5)
     return minitorch.Parameter(r)
 
+# TODO: Implement for Task 2.5.
+class Network(minitorch.Module):
+    """A simple feedforward neural network with three linear layers."""
+    def __init__(self, hidden_layers):
+        super().__init__()
+        self.layer1 = Linear(2, hidden_layers)
+        self.layer2 = Linear(hidden_layers, hidden_layers)
+        self.layer3 = Linear(hidden_layers, 1)
+
+    def forward(self, x):
+        h = self.layer1.forward(x).relu()
+        h = self.layer2.forward(h).relu()
+        return self.layer3.forward(h).sigmoid()
+
+class Linear(minitorch.Module):
+    """Initializes a linear layer with weights and bias."""
+    def __init__(self, in_size, out_size):
+        super().__init__()
+        self.weights = RParam(in_size, out_size)
+        self.bias = RParam(out_size)
+        self.out_size = out_size
+
+    def forward(self, x):
+        """Computes the forward pass utilizing view and broadcasting to simulate MatMul."""
+        batch, in_size = x.shape
+
+        return (
+        self.weights.value.view(1, in_size, self.out_size)
+            * x.view(batch, in_size, 1)
+        ).sum(1).view(batch, self.out_size) + self.bias.value.view(self.out_size)
+
 
 def default_log_fn(epoch, total_loss, correct, losses):
     print("Epoch ", epoch, " loss ", total_loss, "correct", correct)
@@ -64,6 +95,29 @@ class TensorTrain:
 if __name__ == "__main__":
     PTS = 50
     HIDDEN = 2
-    RATE = 0.5
+    RATE = 0.1
+    EPOCHS = 500
     data = minitorch.datasets["Simple"](PTS)
-    TensorTrain(HIDDEN).train(data, RATE)
+    TensorTrain(HIDDEN).train(data, RATE, EPOCHS)
+
+
+    # PTS = 50
+    # HIDDEN = 2
+    # RATE = 0.5
+    # EPOCHS = 500
+    # data = minitorch.datasets["Diag"](PTS)
+    # TensorTrain(HIDDEN).train(data, RATE, EPOCHS)
+
+    # PTS = 50
+    # HIDDEN = 10
+    # RATE = 0.5
+    # EPOCHS = 750
+    # data = minitorch.datasets["Split"](PTS)
+    # TensorTrain(HIDDEN).train(data, RATE)
+
+    # PTS = 50
+    # HIDDEN = 10
+    # RATE = 0.5
+    # EPOCHS = 500
+    # data = minitorch.datasets["Xor"](PTS)
+    # TensorTrain(HIDDEN).train(data, RATE)
