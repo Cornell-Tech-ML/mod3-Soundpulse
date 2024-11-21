@@ -464,55 +464,56 @@ def _tensor_matrix_multiply(
     batch = cuda.blockIdx.z
 
     BLOCK_DIM = 32
-    shared_a = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
-    shared_b = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
+    a_shared = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
+    b_shared = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
 
-    # The local position in the block
-    x = cuda.threadIdx.x
-    y = cuda.threadIdx.y
+    # The final position c[i, j]
+    i = cuda.blockIdx.x * cuda.blockDim + cuda.threadIdx.x
+    j = cuda.blockIdx.y * cuda.blockDim + cuda.threadIdx.y
 
-    # Get starting positions for each block
-    block_x = cuda.blockIdx.x * BLOCK_DIM
-    block_y = cuda.blockIdx.y * BLOCK_DIM
+    # The local position in the block.
+    tx = cuda.threadIdx.x
+    ty = cuda.threadIdx.y
 
-    # Initialize accumulator
-    temp = 0
+    # Code Plan:
+    # 1) Move across shared dimension by block dim.
+    # Get starting positions
+    temp = 0.0
+    num_tiles = (a_shape[2] + BLOCK_DIM - 1) // BLOCK_DIM
 
-    # Loop over all tiles needed
-    for block_index in range((a_shape[-1] + (BLOCK_DIM - 1)) // BLOCK_DIM):
-        # Calculate current tile position
-        block_mid = block_index * BLOCK_DIM
+    for tile_idx in range(num_tiles):
+        # Calculate positions for loading data
+        a_col = tile_idx * BLOCK_DIM + tx
+        b_row = tile_idx * BLOCK_DIM + ty
 
-        # Load data into shared memory
-        if (block_mid + x) < a_shape[-1] and (block_y + y) < a_shape[-2]:
-            shared_a[y, x] = a_storage[
-                batch * a_batch_stride
-                + (block_mid + x) * a_strides[-1]
-                + (block_y + y) * a_strides[-2]
-            ]
+        # Dealing with dim 1
+        if j < a_shape[1] and a_col < a_shape[2]:
+            # move to storage position with strides
+            a_pos = batch * a_batch_stride + j * a_strides[1] + a_col * a_strides[2]
+            a_shared[ty, tx] = a_storage[a_pos]
         else:
-            shared_a[y, x] = 0
-        if (block_x + x) < b_shape[-1] and (block_mid + y) < b_shape[-2]:
-            shared_b[y, x] = b_storage[
-                batch * b_batch_stride
-                + (block_x + x) * b_strides[-1]
-                + (block_mid + y) * b_strides[-2]
-            ]
+            a_shared[ty, tx] = 0.0
+
+        # Dealing with dim 1
+        if b_row < b_shape[1] and i < b_shape[2]:
+            # move to storage position with strides
+            b_pos = batch * b_batch_stride + b_row * b_strides[1] + i * b_strides[2]
+            b_shared[ty, tx] = b_storage[b_pos]
         else:
-            shared_b[y, x] = 0
+            b_shared[ty, tx] = 0.0
+
         cuda.syncthreads()
 
-        # Compute dot product for this tile
-        for val in range(BLOCK_DIM):
-            temp += shared_a[y, val] * shared_b[val, x]
+        # Accumulate dot products to temp
+        for k in range(BLOCK_DIM):
+            if (tile_idx * BLOCK_DIM + k) < a_shape[2]:
+                temp += a_shared[ty, k] * b_shared[k, tx]
+        cuda.syncthreads()
 
-    # Write output
-    if (block_y + y) < out_shape[-2] and (block_x + x) < out_shape[-1]:
-        out[
-            batch * out_strides[0]
-            + (block_y + y) * out_strides[-2]
-            + (block_x + x) * out_strides[-1]
-        ] = temp
+    # assign to out storage
+    if batch < out_shape[0] and j < out_shape[1] and i < out_shape[2]:
+        out_pos = batch * out_strides[0] + j * out_strides[1] + i * out_strides[2]
+        out[out_pos] = temp
 
 
 tensor_matrix_multiply = jit(_tensor_matrix_multiply)
