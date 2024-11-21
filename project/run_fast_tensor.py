@@ -1,128 +1,138 @@
 import random
+
 import numba
+
 import minitorch
+
 import time
 
 datasets = minitorch.datasets
 FastTensorBackend = minitorch.TensorBackend(minitorch.FastOps)
 if numba.cuda.is_available():
-   GPUBackend = minitorch.TensorBackend(minitorch.CudaOps)
+    GPUBackend = minitorch.TensorBackend(minitorch.CudaOps)
 
-def compare_log_fn(epoch, total_loss, correct, losses, time, batch_size, model_type, other_model):
-   print(f"{model_type} Epoch {epoch} loss {total_loss:.4f} correct {correct}")
-   
-   if epoch % 10 == 0:
-       X = minitorch.tensor(other_model.data.X, backend=other_model.backend)
-       this_preds = model_type.model.forward(X).detach()
-       other_preds = other_model.model.forward(X).detach()
-       
-       print("\nFirst layer weights comparison:")
-       print(f"This model: {model_type.model.layer1.weights.value}")
-       print(f"Other model: {other_model.model.layer1.weights.value}")
-        
-       print(this_preds)
-       print(other_preds)
 
-       max_diff = (this_preds - other_preds).sum()
-       print(f"\nPrediction diff @ epoch {epoch}: {max_diff}")
-    #    if max_diff > 1e-4:
-    #        print("WARNING: Large difference detected!")
-    #        print(f"{model_type} preds: {this_preds[:5].tolist()}")
-    #        print(f"Other preds: {other_preds[:5].tolist()}\n")
+def default_log_fn(epoch, total_loss, correct, losses, time, batch_size):
+    print("Epoch ", epoch, " loss ", total_loss, "correct", correct, "duration per epoch:", round(time/10,3), "seconds")
+
+
+def RParam(*shape, backend):
+    r = minitorch.rand(shape, backend=backend) - 0.5
+    return minitorch.Parameter(r)
+
 
 class Network(minitorch.Module):
-   def __init__(self, hidden, backend):
-       super().__init__()
-       self.layer1 = Linear(2, hidden, backend)
-       self.layer2 = Linear(hidden, hidden, backend)
-       self.layer3 = Linear(hidden, 1, backend)
+    def __init__(self, hidden, backend):
+        super().__init__()
 
-   def forward(self, x):
-       h = self.layer1.forward(x).relu()
-       h = self.layer2.forward(h).relu()
-       return self.layer3.forward(h).sigmoid()
+        # Submodules
+        self.layer1 = Linear(2, hidden, backend)
+        self.layer2 = Linear(hidden, hidden, backend)
+        self.layer3 = Linear(hidden, 1, backend)
+
+    def forward(self, x):
+        h = self.layer1.forward(x).relu()
+        h = self.layer2.forward(h).relu()
+        return self.layer3.forward(h).sigmoid()
+        # TODO: Implement for Task 3.5.
+        #raise NotImplementedError("Need to implement for Task 3.5")
+
 
 class Linear(minitorch.Module):
-   def __init__(self, in_size, out_size, backend):
-       super().__init__()
-       self.weights = minitorch.Parameter(minitorch.rand((in_size, out_size), backend=backend) - 0.5)
-       self.bias = minitorch.Parameter(minitorch.zeros((out_size,), backend=backend) + 0.1)
-       self.out_size = out_size
+    def __init__(self, in_size, out_size, backend):
+        super().__init__()
+        self.weights = RParam(in_size, out_size, backend=backend)
+        s = minitorch.zeros((out_size,), backend=backend)
+        s = s + 0.1
+        self.bias = minitorch.Parameter(s)
+        self.out_size = out_size
 
-   def forward(self, x):
-       return x @ self.weights.value + self.bias.value
+    def forward(self, x):
+        return x @ self.weights.value + self.bias.value
+        # TODO: Implement for Task 3.5.
+        #raise NotImplementedError("Need to implement for Task 3.5")
 
-class ModelTrainer:
-   def __init__(self, hidden_layers, backend, data, other_model=None):
-       self.hidden_layers = hidden_layers
-       self.model = Network(hidden_layers, backend)
-       self.backend = backend
-       self.data = data
-       self.other_model = other_model
 
-   def run_many(self, X):
-       return self.model.forward(minitorch.tensor(X, backend=self.backend))
+class FastTrain:
+    def __init__(self, hidden_layers, backend=FastTensorBackend):
+        self.hidden_layers = hidden_layers
+        self.model = Network(hidden_layers, backend)
+        self.backend = backend
 
-   def train(self, learning_rate, max_epochs=500):
-       optim = minitorch.SGD(self.model.parameters(), learning_rate)
-       BATCH = 64
-       losses = []
-       start_time = time.time()
+    def run_one(self, x):
+        return self.model.forward(minitorch.tensor([x], backend=self.backend))
 
-       for epoch in range(max_epochs):
-           total_loss = 0.0
-           data_pairs = list(zip(self.data.X, self.data.y))
-           random.shuffle(data_pairs)
-           X_shuf, y_shuf = zip(*data_pairs)
+    def run_many(self, X):
+        return self.model.forward(minitorch.tensor(X, backend=self.backend))
 
-           for i in range(0, len(X_shuf), BATCH):
-               optim.zero_grad()
-               X = minitorch.tensor(X_shuf[i:i + BATCH], backend=self.backend)
-               y = minitorch.tensor(y_shuf[i:i + BATCH], backend=self.backend)
-               
-               out = self.model.forward(X).view(y.shape[0])
-               prob = (out * y) + (out - 1.0) * (y - 1.0)
-               loss = -prob.log()
-               (loss / y.shape[0]).sum().view(1).backward()
-               total_loss = loss.sum().view(1)[0]
-               optim.step()
+    def train(self, data, learning_rate, max_epochs=500, log_fn=default_log_fn):
+        self.model = Network(self.hidden_layers, self.backend)
+        optim = minitorch.SGD(self.model.parameters(), learning_rate)
+        BATCH = 10
+        losses = []
 
-           losses.append(total_loss)
-           
-           if epoch % 10 == 0:
-               epoch_time = time.time() - start_time
-               X = minitorch.tensor(self.data.X, backend=self.backend)
-               y = minitorch.tensor(self.data.y, backend=self.backend)
-               out = self.model.forward(X).view(y.shape[0])
-               correct = int(((out.detach() > 0.5) == y).sum()[0])
-               
-               compare_log_fn(epoch, total_loss, correct, losses, epoch_time, BATCH, 
-                            self, self.other_model)
-               start_time = time.time()
+        tik = time.time()
 
-def train_and_compare(data, hidden=10, rate=0.05, epochs=200):
-   cpu_trainer = ModelTrainer(hidden, FastTensorBackend, data)
-   gpu_trainer = ModelTrainer(hidden, GPUBackend, data, cpu_trainer)
-   cpu_trainer.other_model = gpu_trainer
+        for epoch in range(max_epochs):
+            total_loss = 0.0
+            c = list(zip(data.X, data.y))
+            random.shuffle(c)
+            X_shuf, y_shuf = zip(*c)
 
-   print("Training both models side by side:")
-   cpu_trainer.train(rate, epochs)
-   gpu_trainer.train(rate, epochs)
+            for i in range(0, len(X_shuf), BATCH):
+                optim.zero_grad()
+                X = minitorch.tensor(X_shuf[i : i + BATCH], backend=self.backend)
+                y = minitorch.tensor(y_shuf[i : i + BATCH], backend=self.backend)
+                # Forward
+
+                out = self.model.forward(X).view(y.shape[0])
+                prob = (out * y) + (out - 1.0) * (y - 1.0)
+                loss = -prob.log()
+                (loss / y.shape[0]).sum().view(1).backward()
+
+                total_loss = loss.sum().view(1)[0]
+
+                # Update
+                optim.step()
+
+            losses.append(total_loss)
+            # Logging
+            if epoch % 10 == 0 or epoch == max_epochs:
+                tok = time.time()
+                X = minitorch.tensor(data.X, backend=self.backend)
+                y = minitorch.tensor(data.y, backend=self.backend)
+                out = self.model.forward(X).view(y.shape[0])
+                y2 = minitorch.tensor(data.y)
+                correct = int(((out.detach() > 0.5) == y2).sum()[0])
+                log_fn(epoch, total_loss, correct, losses, (tok - tik), BATCH)
+                tik = time.time()
+
 
 if __name__ == "__main__":
-   import argparse
-   parser = argparse.ArgumentParser()
-   parser.add_argument("--PTS", type=int, default=50)
-   parser.add_argument("--HIDDEN", type=int, default=10)
-   parser.add_argument("--RATE", type=float, default=0.05)
-   parser.add_argument("--DATASET", default="simple")
-   args = parser.parse_args()
+    import argparse
 
-   if args.DATASET == "xor":
-       data = datasets["Xor"](args.PTS)
-   elif args.DATASET == "simple":
-       data = datasets["Simple"](args.PTS) 
-   elif args.DATASET == "split":
-       data = datasets["Split"](args.PTS)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--PTS", type=int, default=50, help="number of points")
+    parser.add_argument("--HIDDEN", type=int, default=10, help="number of hiddens")
+    parser.add_argument("--RATE", type=float, default=0.05, help="learning rate")
+    parser.add_argument("--BACKEND", default="cpu", help="backend mode")
+    parser.add_argument("--DATASET", default="simple", help="dataset")
+    parser.add_argument("--PLOT", default=False, help="dataset")
 
-   train_and_compare(data, args.HIDDEN, args.RATE)
+    args = parser.parse_args()
+
+    PTS = args.PTS
+
+    if args.DATASET == "xor":
+        data = minitorch.datasets["Xor"](PTS)
+    elif args.DATASET == "simple":
+        data = minitorch.datasets["Simple"](PTS)
+    elif args.DATASET == "split":
+        data = minitorch.datasets["Split"](PTS)
+
+    HIDDEN = int(args.HIDDEN)
+    RATE = args.RATE
+
+    FastTrain(
+        HIDDEN, backend=FastTensorBackend if args.BACKEND != "gpu" else GPUBackend
+    ).train(data, RATE)
