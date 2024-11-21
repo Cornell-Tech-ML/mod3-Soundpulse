@@ -16,6 +16,13 @@ def compare_log_fn(epoch, total_loss, correct, losses, time, batch_size, model_t
        this_preds = model_type.model.forward(X).detach()
        other_preds = other_model.model.forward(X).detach()
        
+        print("\nFirst layer weights comparison:")
+        print(f"This model: {model_type.model.layer1.weights.value}")
+        print(f"Other model: {other_model.model.layer1.weights.value}")
+        
+        print(this_preds)
+        print(other_preds)
+
        max_diff = (this_preds - other_preds).sum()
        print(f"\nPrediction diff @ epoch {epoch}: {max_diff}")
     #    if max_diff > 1e-4:
