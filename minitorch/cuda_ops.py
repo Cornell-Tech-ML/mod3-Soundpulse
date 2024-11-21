@@ -488,19 +488,17 @@ def _tensor_matrix_multiply(
         b_row = tile_idx * BLOCK_DIM + ty
 
         # Dealing with dim 1
-        a_batch = 0 if a_shape[0] == 1 else batch
-        if a_batch < a_shape[0] and j < a_shape[1] and a_col < a_shape[2]:
+        if j < a_shape[1] and a_col < a_shape[2]:
             # move to storage position with strides
-            a_pos = a_batch * a_batch_stride + j * a_strides[1] + a_col * a_strides[2]
+            a_pos = batch * a_batch_stride + j * a_strides[1] + a_col * a_strides[2]
             a_shared[ty, tx] = a_storage[a_pos]
         else:
             a_shared[ty, tx] = 0.0
 
         # Dealing with dim 1
-        b_batch = 0 if b_shape[0] == 1 else batch
-        if b_batch < b_shape[0] and b_row < b_shape[1] and i < b_shape[2]:
+        if b_row < b_shape[1] and i < b_shape[2]:
             # move to storage position with strides
-            b_pos = b_batch * b_batch_stride + b_row * b_strides[1] + i * b_strides[2]
+            b_pos = batch * b_batch_stride + b_row * b_strides[1] + i * b_strides[2]
             b_shared[ty, tx] = b_storage[b_pos]
         else:
             b_shared[ty, tx] = 0.0
