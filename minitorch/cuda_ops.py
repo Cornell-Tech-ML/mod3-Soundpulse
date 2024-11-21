@@ -175,18 +175,15 @@ def tensor_map(
         in_shape: Shape,
         in_strides: Strides,
     ) -> None:
-        i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
-
-        if i >= out_size:
-            return
-
-        out_index = cuda.local.array(MAX_DIMS, numba.int32)
-        in_index = cuda.local.array(MAX_DIMS, numba.int32)
-        to_index(i, out_shape, out_index)
-        broadcast_index(out_index, out_shape, in_shape, in_index)
-        o = index_to_position(out_index, out_strides)
-        j = index_to_position(in_index, in_strides)
-        out[o] = fn(in_storage[j])
+        out_i = numba.cuda.blockIdx.x * THREADS_PER_BLOCK + numba.cuda.threadIdx.x
+        if out_i < out.size:
+            out_index = numba.cuda.local.array(MAX_DIMS, numba.int32)
+            in_index = numba.cuda.local.array(MAX_DIMS, numba.int32)
+            to_index(out_i, out_shape, out_index)
+            broadcast_index(out_index, out_shape, in_shape, in_index)
+            in_position = index_to_position(in_index, in_strides)
+            out_position = index_to_position(out_index, out_strides)
+            out[out_position] = fn(in_storage[in_position])
 
     return cuda.jit()(_map)  # type: ignore
 
@@ -224,22 +221,21 @@ def tensor_zip(
         b_strides: Strides,
     ) -> None:
 
-        i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
+        out_i = numba.cuda.blockIdx.x * THREADS_PER_BLOCK + numba.cuda.threadIdx.x
+        if out_i < out.size:
+            out_index = numba.cuda.local.array(MAX_DIMS, numba.int32)
+            a_index = numba.cuda.local.array(MAX_DIMS, numba.int32)
+            b_index = numba.cuda.local.array(MAX_DIMS, numba.int32)
 
-        if i >= out_size:
-            return
-
-        out_index = cuda.local.array(MAX_DIMS, numba.int32)
-        a_index = cuda.local.array(MAX_DIMS, numba.int32)
-        b_index = cuda.local.array(MAX_DIMS, numba.int32)
-
-        to_index(i, out_shape, out_index)
-        o = index_to_position(out_index, out_strides)
-        broadcast_index(out_index, out_shape, a_shape, a_index)
-        j = index_to_position(a_index, a_strides)
-        broadcast_index(out_index, out_shape, b_shape, b_index)
-        k = index_to_position(b_index, b_strides)
-        out[o] = fn(a_storage[j], b_storage[k])
+            to_index(out_i, out_shape, out_index)
+            broadcast_index(out_index, out_shape, a_shape, a_index)
+            broadcast_index(out_index, out_shape, b_shape, b_index)
+            a_position, b_position = (
+                index_to_position(a_index, a_strides),
+                index_to_position(b_index, b_strides),
+            )
+            out_position = index_to_position(out_index, out_strides)
+            out[out_position] = fn(a_storage[a_position], b_storage[b_position])
 
     return cuda.jit()(_zip)  # type: ignore
 
@@ -460,62 +456,46 @@ def _tensor_matrix_multiply(
     """
     a_batch_stride = a_strides[0] if a_shape[0] > 1 else 0
     b_batch_stride = b_strides[0] if b_shape[0] > 1 else 0
-    # Batch dimension - fixed
-    batch = cuda.blockIdx.z
-
     BLOCK_DIM = 32
-    a_shared = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
-    b_shared = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
+    shared_a = numba.cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
+    shared_b = numba.cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
 
-    # The final position c[i, j]
-    i = cuda.blockIdx.x * BLOCK_DIM + cuda.threadIdx.x
-    j = cuda.blockIdx.y * BLOCK_DIM + cuda.threadIdx.y
+    y = numba.cuda.threadIdx.y
+    x = numba.cuda.threadIdx.x
+    block_x = numba.cuda.blockIdx.x * BLOCK_DIM
+    block_y = numba.cuda.blockIdx.y * BLOCK_DIM
+    z = numba.cuda.blockIdx.z
 
-    # The local position in the block.
-    tx = cuda.threadIdx.x
-    ty = cuda.threadIdx.y
-
-    # Code Plan:
-    # 1) Move across shared dimension by block dim.
-    # Get starting positions
-    temp = 0.0
-    num_tiles = (a_shape[-1] + BLOCK_DIM - 1) // BLOCK_DIM
-
-    assert a_shape[-1] == b_shape[-2]
-
-    for tile_idx in range(num_tiles):
-        # Calculate positions for loading data
-        a_col = tile_idx * BLOCK_DIM + tx
-        b_row = tile_idx * BLOCK_DIM + ty
-
-        # Dealing with dim 1
-        if j < a_shape[-2] and a_col < a_shape[-1]:
-            # move to storage position with strides
-            a_pos = batch * a_batch_stride + j * a_strides[-2] + a_col * a_strides[-1]
-            a_shared[ty, tx] = a_storage[a_pos]
+    temp = 0
+    for block_index in range((a_shape[-1] + (BLOCK_DIM - 1)) // BLOCK_DIM):
+        block_mid = block_index * BLOCK_DIM
+        if (block_mid + x) < a_shape[-1] and (block_y + y) < a_shape[-2]:
+            shared_a[y, x] = a_storage[
+                z * a_batch_stride
+                + (block_mid + x) * a_strides[-1]
+                + (block_y + y) * a_strides[-2]
+            ]
         else:
-            a_shared[ty, tx] = 0.0
-
-        # Dealing with dim 1
-        if b_row < b_shape[-2] and i < b_shape[-1]:
-            # move to storage position with strides
-            b_pos = batch * b_batch_stride + b_row * b_strides[-2] + i * b_strides[-1]
-            b_shared[ty, tx] = b_storage[b_pos]
+            shared_a[y, x] = 0
+        if (block_x + x) < b_shape[-1] and (block_mid + y) < b_shape[-2]:
+            shared_b[y, x] = b_storage[
+                z * b_batch_stride
+                + (block_x + x) * b_strides[-1]
+                + (block_mid + y) * b_strides[-2]
+            ]
         else:
-            b_shared[ty, tx] = 0.0
+            shared_b[y, x] = 0
+        numba.cuda.syncthreads()
 
-        cuda.syncthreads()
+        for val in range(BLOCK_DIM):
+            temp += shared_a[y, val] * shared_b[val, x]
 
-        # Accumulate dot products to temp
-        for k in range(BLOCK_DIM):
-            temp += a_shared[ty, k] * b_shared[k, tx]
-
-        cuda.syncthreads()
-
-    # assign to out storage
-    if j < out_shape[-2] and i < out_shape[-1]:
-        out_pos = batch * out_strides[0] + j * out_strides[1] + i * out_strides[2]
-        out[out_pos] = temp
+    if (block_y + y) < out_shape[-2] and (block_x + x) < out_shape[-1]:
+        out[
+            z * out_strides[0]
+            + (block_y + y) * out_strides[-2]
+            + (block_x + x) * out_strides[-1]
+        ] = temp
 
 
 tensor_matrix_multiply = jit(_tensor_matrix_multiply)
