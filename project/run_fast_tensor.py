@@ -68,7 +68,7 @@ class FastTrain:
     def train(self, data, learning_rate, max_epochs=500, log_fn=default_log_fn):
         self.model = Network(self.hidden_layers, self.backend)
         optim = minitorch.SGD(self.model.parameters(), learning_rate)
-        BATCH = 10
+        BATCH = 100
         losses = []
 
         tik = time.time()
