@@ -13,7 +13,7 @@ if numba.cuda.is_available():
 
 
 def default_log_fn(epoch, total_loss, correct, losses, time, batch_size):
-    print("Epoch ", epoch, " loss ", total_loss, "correct", correct, "duration per 10 Epoch:", round(time,3), "seconds")
+    print("Epoch ", epoch, " loss ", total_loss, "correct", correct, "duration per Epoch:", round(time/10,3), "seconds")
 
 
 def RParam(*shape, backend):
@@ -68,7 +68,7 @@ class FastTrain:
     def train(self, data, learning_rate, max_epochs=500, log_fn=default_log_fn):
         self.model = Network(self.hidden_layers, self.backend)
         optim = minitorch.SGD(self.model.parameters(), learning_rate)
-        BATCH = 10
+        BATCH = 64
         losses = []
 
         tik = time.time()
