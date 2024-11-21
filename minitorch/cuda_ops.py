@@ -506,8 +506,8 @@ def _tensor_matrix_multiply(
 
         # Accumulate dot products to temp
         for k in range(BLOCK_DIM):
-            if (tile_idx * BLOCK_DIM + k) < a_shape[2]:
-                temp += a_shared[ty, k] * b_shared[k, tx]
+            temp += a_shared[ty, k] * b_shared[k, tx]
+            
         cuda.syncthreads()
 
     # assign to out storage
