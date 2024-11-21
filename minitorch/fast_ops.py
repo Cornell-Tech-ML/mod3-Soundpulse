@@ -364,7 +364,7 @@ def _tensor_matrix_multiply(
     # Main parallel loop
     for p in prange(len(out)):
         # Calculate positions
-        m = (p // out_shape[-1]) % out_shape[-2]
+        m = (p % (out_shape[-1] * out_shape[-2])) // out_shape[-1]
         n = p % out_shape[-1]
 
         # Positions per movement: R * C
@@ -384,7 +384,7 @@ def _tensor_matrix_multiply(
                 * b_storage[b_pos + k * b_strides[-2]]
             )
 
-        out[p] = temp
+        out[batch * out_strides[0] + m * out_strides[1] + n * out_strides[2]] = temp
 
 
 tensor_matrix_multiply = njit(_tensor_matrix_multiply, parallel=True)
