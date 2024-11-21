@@ -182,7 +182,7 @@ def tensor_map(
                 to_index(i, out_shape, out_index)
                 broadcast_index(out_index, out_shape, in_shape, in_index)
 
-                x = in_storage[index_to_position(in_index, in_strides)]
+                x = float(in_storage[index_to_position(in_index, in_strides)])
                 index = index_to_position(out_index, out_strides)
                 out[index] = fn(x)
 
