@@ -327,36 +327,33 @@ def tensor_reduce(
         reduce_value: float,
     ) -> None:
         BLOCK_DIM = 1024
-        cache = cuda.shared.array(BLOCK_DIM, numba.float64)
-        out_index = cuda.local.array(MAX_DIMS, numba.int32)
-        out_pos = cuda.blockIdx.x
-        pos = cuda.threadIdx.x
+        reduce_size = a_shape[reduce_dim]
+        local_idx = numba.cuda.threadIdx.x
+        block_idx = numba.cuda.blockIdx.x
+        shared_block = numba.cuda.shared.array(BLOCK_DIM, numba.float64)
+        offset = 1
 
-        if out_pos >= out_size:
-            return
-
-        # Convert output position to index
-        to_index(out_pos, out_shape, out_index)
+        out_index = numba.cuda.local.array(MAX_DIMS, numba.int32)
+        to_index(block_idx, out_shape, out_index)
         out_position = index_to_position(out_index, out_strides)
 
-        cache[pos] = reduce_value
-        reduce_size = a_shape[reduce_dim]
-        
-        if pos < reduce_size:
-            out_index[reduce_dim] = pos
-            cache[pos] = a_storage[index_to_position(out_index, a_strides)]
-        cuda.syncthreads()
+        if local_idx < reduce_size:
+            out_index[reduce_dim] = local_idx
+            shared_block[local_idx] = a_storage[index_to_position(out_index, a_strides)]
+        else:
+            shared_block[local_idx] = reduce_value
 
-        # Reduction in shared memory
-        stride = BLOCK_DIM // 2
-        while stride > 0:
-            if pos < stride and pos + stride < reduce_size:
-                cache[pos] = fn(cache[pos], cache[pos + stride])
-            cuda.syncthreads()
-            stride //= 2
+        while offset < BLOCK_DIM:
+            numba.cuda.syncthreads()
+            if local_idx % (offset * 2) == 0:
+                shared_block[local_idx] = fn(
+                    shared_block[local_idx], shared_block[local_idx + offset]
+                )
+            offset *= 2
 
-        if pos == 0:
-            out[out_position] = cache[0]
+        numba.cuda.syncthreads()
+        if local_idx == 0:
+            out[out_position] = shared_block[local_idx]
 
     return jit(_reduce)  # type: ignore
 
