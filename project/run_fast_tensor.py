@@ -16,7 +16,7 @@ def compare_log_fn(epoch, total_loss, correct, losses, time, batch_size, model_t
        this_preds = model_type.model.forward(X).detach()
        other_preds = other_model.model.forward(X).detach()
        
-       max_diff = float(abs(this_preds - other_preds).max())
+       max_diff = float((this_preds - other_preds).sum())
        print(f"\nPrediction diff @ epoch {epoch}: {max_diff:.6f}")
        if max_diff > 1e-4:
            print("WARNING: Large difference detected!")
@@ -58,7 +58,7 @@ class ModelTrainer:
 
    def train(self, learning_rate, max_epochs=500):
        optim = minitorch.SGD(self.model.parameters(), learning_rate)
-       BATCH = 10
+       BATCH = 64
        losses = []
        start_time = time.time()
 
