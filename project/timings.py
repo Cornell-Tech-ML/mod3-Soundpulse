@@ -4,7 +4,6 @@ import minitorch
 import time
 import sys
 import numpy as np
-import matplotlib.pyplot as plt
 
 FastTensorBackend = minitorch.TensorBackend(minitorch.FastOps)
 GPUBackend = minitorch.TensorBackend(minitorch.CudaOps)
