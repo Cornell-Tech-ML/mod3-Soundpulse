@@ -179,10 +179,10 @@ def tensor_map(
             in_index: Index = np.zeros(MAX_DIMS, np.int32)
             out_positions = np.zeros(len(out), np.int32)
             in_positions = np.zeros(len(out), np.int32)
+            broadcast_index(out_index, out_shape, in_shape, in_index)
 
-            for i in range(len(out)):
+            for i in prange(len(out)):
                 to_index(i, out_shape, out_index)
-                broadcast_index(out_index, out_shape, in_shape, in_index)
                 out_positions[i] = index_to_position(out_index, out_strides)
                 in_positions[i] = index_to_position(in_index, in_strides)
 
@@ -242,10 +242,11 @@ def tensor_zip(
             a_positions = np.zeros(len(out), np.int32)
             b_positions = np.zeros(len(out), np.int32)
 
-            for i in range(len(out)):
+            broadcast_index(out_index, out_shape, a_shape, a_index)
+            broadcast_index(out_index, out_shape, b_shape, b_index)
+
+            for i in prange(len(out)):
                 to_index(i, out_shape, out_index)
-                broadcast_index(out_index, out_shape, a_shape, a_index)
-                broadcast_index(out_index, out_shape, b_shape, b_index)
                 out_positions[i] = index_to_position(out_index, out_strides)
                 a_positions[i] = index_to_position(a_index, a_strides)
                 b_positions[i] = index_to_position(b_index, b_strides)
