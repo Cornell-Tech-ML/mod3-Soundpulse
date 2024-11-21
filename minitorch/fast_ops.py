@@ -177,14 +177,17 @@ def tensor_map(
         else:
             out_index: Index = np.zeros(MAX_DIMS, np.int32)
             in_index: Index = np.zeros(MAX_DIMS, np.int32)
+            out_positions = np.zeros(len(out), np.int32)
+            in_positions = np.zeros(len(out), np.int32)
 
-            for i in prange(len(out)):
+            for i in range(len(out)):
                 to_index(i, out_shape, out_index)
                 broadcast_index(out_index, out_shape, in_shape, in_index)
-                x = in_storage[index_to_position(in_index, in_strides)]
-                idx = index_to_position(out_index, out_strides)
-                out[idx] = fn(x)
+                out_positions[i] = index_to_position(out_index, out_strides)
+                in_positions[i] = index_to_position(in_index, in_strides)
 
+            for i in prange(len(out)):
+                out[out_positions[i]] = fn(float(in_storage[in_positions[i]]))
 
     return njit(_map, parallel=True)  # type: ignore
 
@@ -235,18 +238,22 @@ def tensor_zip(
             out_index: Index = np.zeros(MAX_DIMS, np.int32)
             a_index: Index = np.zeros(MAX_DIMS, np.int32)
             b_index: Index = np.zeros(MAX_DIMS, np.int32)
+            out_positions = np.zeros(len(out), np.int32)
+            a_positions = np.zeros(len(out), np.int32)
+            b_positions = np.zeros(len(out), np.int32)
+
+            for i in range(len(out)):
+                to_index(i, out_shape, out_index)
+                broadcast_index(out_index, out_shape, a_shape, a_index)
+                broadcast_index(out_index, out_shape, b_shape, b_index)
+                out_positions[i] = index_to_position(out_index, out_strides)
+                a_positions[i] = index_to_position(a_index, a_strides)
+                b_positions[i] = index_to_position(b_index, b_strides)
 
             for i in prange(len(out)):
-                to_index(i, out_shape, out_index)
-                index = index_to_position(out_index, out_strides)
-
-                broadcast_index(out_index, out_shape, a_shape, a_index)
-                a = index_to_position(a_index, a_strides)
-
-                broadcast_index(out_index, out_shape, b_shape, b_index)
-                b = index_to_position(b_index, b_strides)
-
-                out[index] = fn(a, b)
+                out[out_positions[i]] = fn(
+                    float(a_storage[a_positions[i]]), float(b_storage[b_positions[i]])
+                )
 
     return njit(_zip, parallel=True)  # type: ignore
 
