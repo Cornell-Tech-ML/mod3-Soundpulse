@@ -481,6 +481,8 @@ def _tensor_matrix_multiply(
     temp = 0.0
     num_tiles = (a_shape[-1] + BLOCK_DIM - 1) // BLOCK_DIM
 
+    assert a_shape[-1] == b_shape[-2]
+
     for tile_idx in range(num_tiles):
         # Calculate positions for loading data
         a_col = tile_idx * BLOCK_DIM + tx
