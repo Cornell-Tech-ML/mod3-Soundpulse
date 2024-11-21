@@ -175,11 +175,11 @@ def tensor_map(
         in_shape: Shape,
         in_strides: Strides,
     ) -> None:
-        i = cuda.blockIdx.x * THREADS_PER_BLOCK + cuda.threadIdx.x
+        out_index = cuda.local.array(MAX_DIMS, numba.int32)
+        in_index = cuda.local.array(MAX_DIMS, numba.int32)
+        i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
 
         if i < out_size:
-            out_index = cuda.local.array(MAX_DIMS, numba.int32)
-            in_index = cuda.local.array(MAX_DIMS, numba.int32)
             to_index(i, out_shape, out_index)
             broadcast_index(out_index, out_shape, in_shape, in_index)
             o = index_to_position(out_index, out_strides)
@@ -221,14 +221,12 @@ def tensor_zip(
         b_shape: Shape,
         b_strides: Strides,
     ) -> None:
-
+        out_index = cuda.local.array(MAX_DIMS, numba.int32)
+        a_index = cuda.local.array(MAX_DIMS, numba.int32)
+        b_index = cuda.local.array(MAX_DIMS, numba.int32)
         i = cuda.blockIdx.x * THREADS_PER_BLOCK + cuda.threadIdx.x
 
         if i < out_size:
-            out_index = cuda.local.array(MAX_DIMS, numba.int32)
-            a_index = cuda.local.array(MAX_DIMS, numba.int32)
-            b_index = cuda.local.array(MAX_DIMS, numba.int32)
-
             to_index(i, out_shape, out_index)
             broadcast_index(out_index, out_shape, a_shape, a_index)
             broadcast_index(out_index, out_shape, b_shape, b_index)
@@ -338,14 +336,14 @@ def tensor_reduce(
 
         # Convert output position to index
         to_index(out_pos, out_shape, out_index)
-        out_position = index_to_position(out_index, out_strides)
-
         cache[pos] = reduce_value
         reduce_size = a_shape[reduce_dim]
         
         if pos < reduce_size:
             out_index[reduce_dim] = pos
             cache[pos] = a_storage[index_to_position(out_index, a_strides)]
+        else:
+            cache[pos] = reduce_value
         cuda.syncthreads()
 
         # Reduction in shared memory
@@ -356,6 +354,7 @@ def tensor_reduce(
             cuda.syncthreads()
             stride //= 2
 
+        out_position = index_to_position(out_index, out_strides)
         if pos == 0:
             out[out_position] = cache[0]
 
