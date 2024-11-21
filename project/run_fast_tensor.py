@@ -16,12 +16,12 @@ def compare_log_fn(epoch, total_loss, correct, losses, time, batch_size, model_t
        this_preds = model_type.model.forward(X).detach()
        other_preds = other_model.model.forward(X).detach()
        
-       max_diff = float((this_preds - other_preds).sum())
-       print(f"\nPrediction diff @ epoch {epoch}: {max_diff:.6f}")
-       if max_diff > 1e-4:
-           print("WARNING: Large difference detected!")
-           print(f"{model_type} preds: {this_preds[:5].tolist()}")
-           print(f"Other preds: {other_preds[:5].tolist()}\n")
+       max_diff = (this_preds - other_preds).sum()
+       print(f"\nPrediction diff @ epoch {epoch}: {max_diff}")
+    #    if max_diff > 1e-4:
+    #        print("WARNING: Large difference detected!")
+    #        print(f"{model_type} preds: {this_preds[:5].tolist()}")
+    #        print(f"Other preds: {other_preds[:5].tolist()}\n")
 
 class Network(minitorch.Module):
    def __init__(self, hidden, backend):
