@@ -48,8 +48,7 @@ class TensorOps:
     @staticmethod
     def matrix_multiply(a: Tensor, b: Tensor) -> Tensor:
         """Matrix multiply"""
-        ...
-        # raise NotImplementedError("Not implemented in this assignment")
+        raise NotImplementedError("Not implemented in this assignment")
 
     cuda = False
 
@@ -227,6 +226,13 @@ class SimpleOps(TensorOps):
             return out
 
         return ret
+
+    @staticmethod
+    def matrix_multiply(a: "Tensor", b: "Tensor") -> "Tensor":
+        """Matrix multiplication"""
+        raise NotImplementedError("Not implemented in this assignment")
+
+    is_cuda = False
 
 # Implementations.
 
