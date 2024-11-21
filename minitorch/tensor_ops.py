@@ -228,34 +228,34 @@ class SimpleOps(TensorOps):
 
         return ret
 
-    @staticmethod
-    def matrix_multiply(a: "Tensor", b: "Tensor") -> "Tensor":
-        """Matrix multiplication"""
-        # Make these always be a 3 dimensional multiply
-        both_2d = 0
-        if len(a.shape) == 2:
-            a = a.contiguous().view(1, a.shape[0], a.shape[1])
-            both_2d += 1
-        if len(b.shape) == 2:
-            b = b.contiguous().view(1, b.shape[0], b.shape[1])
-            both_2d += 1
-        both_2d = both_2d == 2
+    # @staticmethod
+    # def matrix_multiply(a: "Tensor", b: "Tensor") -> "Tensor":
+    #     """Matrix multiplication"""
+    #     # Make these always be a 3 dimensional multiply
+    #     both_2d = 0
+    #     if len(a.shape) == 2:
+    #         a = a.contiguous().view(1, a.shape[0], a.shape[1])
+    #         both_2d += 1
+    #     if len(b.shape) == 2:
+    #         b = b.contiguous().view(1, b.shape[0], b.shape[1])
+    #         both_2d += 1
+    #     both_2d = both_2d == 2
 
-        ls = list(shape_broadcast(a.shape[:-2], b.shape[:-2]))
-        ls.append(a.shape[-2])
-        ls.append(b.shape[-1])
-        assert a.shape[-1] == b.shape[-2]
-        out = a.zeros(tuple(ls))
+    #     ls = list(shape_broadcast(a.shape[:-2], b.shape[:-2]))
+    #     ls.append(a.shape[-2])
+    #     ls.append(b.shape[-1])
+    #     assert a.shape[-1] == b.shape[-2]
+    #     out = a.zeros(tuple(ls))
 
-        tensor_matrix_multiply(*out.tuple(), *a.tuple(), *b.tuple())
+    #     tensor_matrix_multiply(*out.tuple(), *a.tuple(), *b.tuple())
 
-        # Undo 3d if we added it.
-        if both_2d:
-            out = out.view(out.shape[1], out.shape[2])
-        return out
+    #     # Undo 3d if we added it.
+    #     if both_2d:
+    #         out = out.view(out.shape[1], out.shape[2])
+    #     return out
         # raise NotImplementedError("Not implemented in this assignment")
 
-    is_cuda = False
+    # is_cuda = False
 
 
 # Implementations.
@@ -411,71 +411,71 @@ def tensor_reduce(
     return _reduce
 
 
-def tensor_matrix_multiply(
-    out: Storage,
-    out_shape: Shape,
-    out_strides: Strides,
-    a_storage: Storage,
-    a_shape: Shape,
-    a_strides: Strides,
-    b_storage: Storage,
-    b_shape: Shape,
-    b_strides: Strides,
-) -> None:
-    """Basic tensor matrix multiply function.
+# def tensor_matrix_multiply(
+#     out: Storage,
+#     out_shape: Shape,
+#     out_strides: Strides,
+#     a_storage: Storage,
+#     a_shape: Shape,
+#     a_strides: Strides,
+#     b_storage: Storage,
+#     b_shape: Shape,
+#     b_strides: Strides,
+# ) -> None:
+#     """Basic tensor matrix multiply function.
 
-    Should work for any tensor shapes that broadcast as long as
+#     Should work for any tensor shapes that broadcast as long as
 
-    ```
-    assert a_shape[-1] == b_shape[-2]
-    ```
+#     ```
+#     assert a_shape[-1] == b_shape[-2]
+#     ```
 
-    Args:
-    ----
-        out (Storage): storage for `out` tensor
-        out_shape (Shape): shape for `out` tensor
-        out_strides (Strides): strides for `out` tensor
-        a_storage (Storage): storage for `a` tensor
-        a_shape (Shape): shape for `a` tensor
-        a_strides (Strides): strides for `a` tensor
-        b_storage (Storage): storage for `b` tensor
-        b_shape (Shape): shape for `b` tensor
-        b_strides (Strides): strides for `b` tensor
+#     Args:
+#     ----
+#         out (Storage): storage for `out` tensor
+#         out_shape (Shape): shape for `out` tensor
+#         out_strides (Strides): strides for `out` tensor
+#         a_storage (Storage): storage for `a` tensor
+#         a_shape (Shape): shape for `a` tensor
+#         a_strides (Strides): strides for `a` tensor
+#         b_storage (Storage): storage for `b` tensor
+#         b_shape (Shape): shape for `b` tensor
+#         b_strides (Strides): strides for `b` tensor
 
-    Returns:
-    -------
-        None : Fills in `out`
+#     Returns:
+#     -------
+#         None : Fills in `out`
 
-    """
-    assert a_shape[-1] == b_shape[-2]
+#     """
+#     assert a_shape[-1] == b_shape[-2]
 
-    a_batch_stride = a_strides[0] if a_shape[0] > 1 else 0
-    b_batch_stride = b_strides[0] if b_shape[0] > 1 else 0
+#     a_batch_stride = a_strides[0] if a_shape[0] > 1 else 0
+#     b_batch_stride = b_strides[0] if b_shape[0] > 1 else 0
 
-    # Main loop
-    for p in range(len(out)):
-        # Calculate positions
-        m = (p // out_shape[-1]) % out_shape[-2]
-        n = p % out_shape[-1]
+#     # Main loop
+#     for p in range(len(out)):
+#         # Calculate positions
+#         m = (p // out_shape[-1]) % out_shape[-2]
+#         n = p % out_shape[-1]
 
-        # Positions per movement: R * C
-        batch = p // (out_shape[-1] * out_shape[-2])
+#         # Positions per movement: R * C
+#         batch = p // (out_shape[-1] * out_shape[-2])
 
-        # Get starting positions
-        a_pos = batch * a_batch_stride + m * a_strides[-2]
-        b_pos = batch * b_batch_stride + n * b_strides[-1]
+#         # Get starting positions
+#         a_pos = batch * a_batch_stride + m * a_strides[-2]
+#         b_pos = batch * b_batch_stride + n * b_strides[-1]
 
-        # A: [B, M, K]
-        # B: [B, K, N]
-        # out: [B, M, N]
-        temp = 0.0
-        for k in range(a_shape[-1]):
-            temp += (
-                a_storage[a_pos + k * a_strides[-1]]
-                * b_storage[b_pos + k * b_strides[-2]]
-            )
+#         # A: [B, M, K]
+#         # B: [B, K, N]
+#         # out: [B, M, N]
+#         temp = 0.0
+#         for k in range(a_shape[-1]):
+#             temp += (
+#                 a_storage[a_pos + k * a_strides[-1]]
+#                 * b_storage[b_pos + k * b_strides[-2]]
+#             )
 
-        out[p] = temp
+#         out[p] = temp
 
 
 SimpleBackend = TensorBackend(SimpleOps)

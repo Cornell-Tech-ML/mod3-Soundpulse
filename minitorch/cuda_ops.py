@@ -175,13 +175,13 @@ def tensor_map(
         in_shape: Shape,
         in_strides: Strides,
     ) -> None:
-        out_index = cuda.local.array(MAX_DIMS, numba.int32)
-        in_index = cuda.local.array(MAX_DIMS, numba.int32)
         i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
 
         if i >= out_size:
             return
 
+        out_index = cuda.local.array(MAX_DIMS, numba.int32)
+        in_index = cuda.local.array(MAX_DIMS, numba.int32)
         to_index(i, out_shape, out_index)
         broadcast_index(out_index, out_shape, in_shape, in_index)
         o = index_to_position(out_index, out_strides)
@@ -223,13 +223,15 @@ def tensor_zip(
         b_shape: Shape,
         b_strides: Strides,
     ) -> None:
-        out_index = cuda.local.array(MAX_DIMS, numba.int32)
-        a_index = cuda.local.array(MAX_DIMS, numba.int32)
-        b_index = cuda.local.array(MAX_DIMS, numba.int32)
+
         i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
 
         if i >= out_size:
             return
+
+        out_index = cuda.local.array(MAX_DIMS, numba.int32)
+        a_index = cuda.local.array(MAX_DIMS, numba.int32)
+        b_index = cuda.local.array(MAX_DIMS, numba.int32)
 
         to_index(i, out_shape, out_index)
         o = index_to_position(out_index, out_strides)
@@ -339,7 +341,6 @@ def tensor_reduce(
 
         # Convert output position to index
         to_index(out_pos, out_shape, out_index)
-
         out_position = index_to_position(out_index, out_strides)
 
         reduce_size = a_shape[reduce_dim]
@@ -351,14 +352,14 @@ def tensor_reduce(
             cache[pos] = reduce_value
 
         while offset < BLOCK_DIM:
-            numba.cuda.syncthreads()
+            cuda.syncthreads()
             if pos % (offset * 2) == 0:
                 cache[pos] = fn(
                     cache[pos], cache[pos + offset]
                 )
             offset *= 2
 
-        numba.cuda.syncthreads()
+        cuda.syncthreads()
         if pos == 0:
             out[out_position] = cache[pos]
 
