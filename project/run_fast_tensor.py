@@ -1,19 +1,15 @@
+import minitorch
+import datasets
+import numba
 import random
 
-import numba
-
-import minitorch
-
-import time
-
-datasets = minitorch.datasets
-FastTensorBackend = minitorch.TensorBackend(minitorch.FastOps)
+FastTensorBackend = minitorch.make_tensor_backend(minitorch.FastOps)
 if numba.cuda.is_available():
-    GPUBackend = minitorch.TensorBackend(minitorch.CudaOps)
+    GPUBackend = minitorch.make_tensor_backend(minitorch.CudaOps, is_cuda=True)
 
 
-def default_log_fn(epoch, total_loss, correct, losses, time, batch_size):
-    print("Epoch ", epoch, " loss ", total_loss, "correct", correct, "duration per Epoch:", round(time/10,3), "seconds")
+def default_log_fn(epoch, total_loss, correct, losses):
+    print("Epoch ", epoch, " loss ", total_loss, "correct", correct)
 
 
 def RParam(*shape, backend):
@@ -31,11 +27,11 @@ class Network(minitorch.Module):
         self.layer3 = Linear(hidden, 1, backend)
 
     def forward(self, x):
+        # ASSIGN3.5
         h = self.layer1.forward(x).relu()
         h = self.layer2.forward(h).relu()
         return self.layer3.forward(h).sigmoid()
-        # TODO: Implement for Task 3.5.
-        #raise NotImplementedError("Need to implement for Task 3.5")
+        # END ASSIGN3.5
 
 
 class Linear(minitorch.Module):
@@ -48,9 +44,10 @@ class Linear(minitorch.Module):
         self.out_size = out_size
 
     def forward(self, x):
-        return x @ self.weights.value + self.bias.value
-        # TODO: Implement for Task 3.5.
-        #raise NotImplementedError("Need to implement for Task 3.5")
+        # ASSIGN3.5
+        batch, in_size = x.shape
+        return x.view(batch, in_size) @ self.weights.value + self.bias.value
+        # END ASSIGN3.5
 
 
 class FastTrain:
@@ -66,12 +63,11 @@ class FastTrain:
         return self.model.forward(minitorch.tensor(X, backend=self.backend))
 
     def train(self, data, learning_rate, max_epochs=500, log_fn=default_log_fn):
+
         self.model = Network(self.hidden_layers, self.backend)
         optim = minitorch.SGD(self.model.parameters(), learning_rate)
-        BATCH = 64
+        BATCH = 10
         losses = []
-
-        tik = time.time()
 
         for epoch in range(max_epochs):
             total_loss = 0.0
@@ -98,14 +94,12 @@ class FastTrain:
             losses.append(total_loss)
             # Logging
             if epoch % 10 == 0 or epoch == max_epochs:
-                tok = time.time()
                 X = minitorch.tensor(data.X, backend=self.backend)
                 y = minitorch.tensor(data.y, backend=self.backend)
                 out = self.model.forward(X).view(y.shape[0])
                 y2 = minitorch.tensor(data.y)
-                correct = int(((out.detach() > 0.5) == y2).sum()[0])
-                log_fn(epoch, total_loss, correct, losses, (tok - tik), BATCH)
-                tik = time.time()
+                correct = int(((out.get_data() > 0.5) == y2).sum()[0])
+                log_fn(epoch, total_loss, correct, losses)
 
 
 if __name__ == "__main__":
@@ -124,11 +118,11 @@ if __name__ == "__main__":
     PTS = args.PTS
 
     if args.DATASET == "xor":
-        data = minitorch.datasets["Xor"](PTS)
+        data = datasets.xor(PTS)
     elif args.DATASET == "simple":
-        data = minitorch.datasets["Simple"](PTS)
+        data = datasets.simple(PTS)
     elif args.DATASET == "split":
-        data = minitorch.datasets["Split"](PTS)
+        data = datasets.split(PTS)
 
     HIDDEN = int(args.HIDDEN)
     RATE = args.RATE
