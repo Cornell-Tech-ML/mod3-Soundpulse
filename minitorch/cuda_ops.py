@@ -507,11 +507,11 @@ def _tensor_matrix_multiply(
         # Accumulate dot products to temp
         for k in range(BLOCK_DIM):
             temp += a_shared[ty, k] * b_shared[k, tx]
-            
+
         cuda.syncthreads()
 
     # assign to out storage
-    if batch < out_shape[0] and j < out_shape[1] and i < out_shape[2]:
+    if j < out_shape[1] and i < out_shape[2]:
         out_pos = batch * out_strides[0] + j * out_strides[1] + i * out_strides[2]
         out[out_pos] = temp
 
