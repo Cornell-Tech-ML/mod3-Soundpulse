@@ -13,7 +13,7 @@ if numba.cuda.is_available():
 
 
 def default_log_fn(epoch, total_loss, correct, losses, time, batch_size):
-    print("Epoch ", epoch, " loss ", total_loss, "correct", correct, "duration per 10 Epoch:", round(time,3), "seconds")
+    print("Epoch ", epoch, " loss ", total_loss, "correct", correct, "duration per epoch:", round(time/10,3), "seconds")
 
 
 def RParam(*shape, backend):
@@ -117,7 +117,7 @@ if __name__ == "__main__":
     parser.add_argument("--RATE", type=float, default=0.05, help="learning rate")
     parser.add_argument("--BACKEND", default="cpu", help="backend mode")
     parser.add_argument("--DATASET", default="simple", help="dataset")
-    parser.add_argument("--PLOT", default=False, help="dataset")
+    parser.add_argument("--PLOT", default=True, help="dataset")
 
     args = parser.parse_args()
 
