@@ -290,8 +290,10 @@ def tensor_reduce(
             index = index_to_position(out_index, out_strides)
 
             for s in range(reduce_size):
-                out_index[reduce_dim] = s
-                out[index] = fn(a_storage[index_to_position(out_index, out_strides)], out[index])
+                a_index = out_index.copy()
+                a_index[reduce_dim] = s
+                
+                out[index] = fn(a_storage[index_to_position(a_index, a_strides)], out[index])
 
     return njit(_reduce, parallel=True)  # type: ignore
 
@@ -347,7 +349,7 @@ def _tensor_matrix_multiply(
     # Main parallel loop
     for p in prange(len(out)):
         # Calculate positions
-        m = (p // out_shape[-1]) % out_shape[-2]
+        m = (p % (out_shape[-1] * out_shape[-2])) // out_shape[-1]
         n = p % out_shape[-1]
 
         # Positions per movement: R * C
