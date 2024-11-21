@@ -464,8 +464,8 @@ def _tensor_matrix_multiply(
     b_shared = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
 
     # The final position c[i, j]
-    i = cuda.blockIdx.x * BLOCK_DIM + cuda.threadIdx.x
-    j = cuda.blockIdx.y * BLOCK_DIM + cuda.threadIdx.y
+    i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
+    j = cuda.blockIdx.y * cuda.blockDim.y + cuda.threadIdx.y
 
     # The local position in the block.
     tx = cuda.threadIdx.x
@@ -484,7 +484,6 @@ def _tensor_matrix_multiply(
         a_col = tile_idx * BLOCK_DIM + tx
         b_row = tile_idx * BLOCK_DIM + ty
 
-        # Dealing with dim 1
         if j < a_shape[-2] and a_col < a_shape[-1]:
             # move to storage position with strides
             a_pos = batch * a_batch_stride + j * a_strides[-2] + a_col * a_strides[-1]
@@ -492,7 +491,6 @@ def _tensor_matrix_multiply(
         else:
             a_shared[ty, tx] = 0.0
 
-        # Dealing with dim 1
         if b_row < b_shape[-2] and i < b_shape[-1]:
             # move to storage position with strides
             b_pos = batch * b_batch_stride + b_row * b_strides[-2] + i * b_strides[-1]
