@@ -230,7 +230,7 @@ def tensor_zip(
             to_index(i, out_shape, out_index)
             broadcast_index(out_index, out_shape, a_shape, a_index)
             broadcast_index(out_index, out_shape, b_shape, b_index)
-            
+
             j = index_to_position(a_index, a_strides)
             k = index_to_position(b_index, b_strides)
             o = index_to_position(out_index, out_strides)
@@ -338,7 +338,7 @@ def tensor_reduce(
         to_index(out_pos, out_shape, out_index)
         cache[pos] = reduce_value
         reduce_size = a_shape[reduce_dim]
-        
+
         if pos < reduce_size:
             out_index[reduce_dim] = pos
             cache[pos] = a_storage[index_to_position(out_index, a_strides)]
@@ -478,10 +478,9 @@ def _tensor_matrix_multiply(
     temp = 0.0
 
     for start in range(0, K, BLOCK_DIM):
-
         # Calculate the position of a_k
         a_k = start + ty
-        
+
         if i < M and a_k < K:
             # Store into shared memory on thread_idx
             a_position = batch * a_batch_stride + i * a_strides[1] + a_k * a_strides[2]
@@ -489,7 +488,7 @@ def _tensor_matrix_multiply(
 
         # Calculate the position of a_b
         b_k = start + tx
-        
+
         if b_k < K and j < N:
             # Store into shared memory based on thread_idx
             b_position = batch * b_batch_stride + b_k * b_strides[1] + j * b_strides[2]

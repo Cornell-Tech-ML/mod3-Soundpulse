@@ -285,7 +285,7 @@ def tensor_reduce(
 
             to_index(i, out_shape, out_index)
             o = index_to_position(out_index, out_strides)
-        
+
             for j in range(reduce_size):
                 out_index[reduce_dim] = j
                 a_pos = index_to_position(out_index, a_strides)

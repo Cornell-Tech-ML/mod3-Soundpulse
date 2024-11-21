@@ -234,6 +234,7 @@ class SimpleOps(TensorOps):
 
     is_cuda = False
 
+
 # Implementations.
 
 
@@ -385,5 +386,6 @@ def tensor_reduce(
                 out[o] = fn(out[o], a_storage[j])
 
     return _reduce
+
 
 SimpleBackend = TensorBackend(SimpleOps)
