@@ -71,8 +71,6 @@ class FastTrain:
         BATCH = 10
         losses = []
 
-        tik = time.time()
-
         for epoch in range(max_epochs):
             total_loss = 0.0
             c = list(zip(data.X, data.y))
@@ -98,15 +96,12 @@ class FastTrain:
             losses.append(total_loss)
             # Logging
             if epoch % 10 == 0 or epoch == max_epochs:
-                tok = time.time()
                 X = minitorch.tensor(data.X, backend=self.backend)
                 y = minitorch.tensor(data.y, backend=self.backend)
                 out = self.model.forward(X).view(y.shape[0])
                 y2 = minitorch.tensor(data.y)
                 correct = int(((out.detach() > 0.5) == y2).sum()[0])
-                log_fn(epoch, total_loss, correct, losses, (tok - tik), BATCH)
-                tik = time.time()
-
+                log_fn(epoch, total_loss, correct, losses)
 
 if __name__ == "__main__":
     import argparse
