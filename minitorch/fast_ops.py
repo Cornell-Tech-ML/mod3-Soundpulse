@@ -175,19 +175,16 @@ def tensor_map(
             for i in prange(len(out)):
                 out[i] = fn(float(in_storage[i]))
         else:
-            out_index: Index = np.zeros(MAX_DIMS, np.int32)
-            in_index: Index = np.zeros(MAX_DIMS, np.int32)
-            out_positions = np.zeros(len(out), np.int32)
-            in_positions = np.zeros(len(out), np.int32)
-
-            for i in range(len(out)):
-                to_index(i, out_shape, out_index)
-                broadcast_index(out_index, out_shape, in_shape, in_index)
-                out_positions[i] = index_to_position(out_index, out_strides)
-                in_positions[i] = index_to_position(in_index, in_strides)
+            in_index = np.zeros(len(in_shape), dtype=int)
+            out_index = np.zeros(len(out_shape), dtype=int)
 
             for i in prange(len(out)):
-                out[out_positions[i]] = fn(float(in_storage[in_positions[i]]))
+                to_index(i, out_shape, out_index)
+                broadcast_index(out_index, out_shape, in_shape, in_index)
+
+                x = in_storage[index_to_position(in_index, in_strides)]
+                index = index_to_position(out_index, out_strides)
+                out[index] = fn(x)
 
     return njit(_map, parallel=True)  # type: ignore
 
