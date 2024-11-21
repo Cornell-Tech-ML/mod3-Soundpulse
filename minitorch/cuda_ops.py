@@ -478,28 +478,35 @@ def _tensor_matrix_multiply(
     temp = 0.0
 
     for start in range(0, K, BLOCK_DIM):
+
+        # Calculate the position of a_k
         a_k = start + ty
         
         if i < M and a_k < K:
-            a_shared[tx, ty] = a_storage[
-                batch * a_batch_stride + i * a_strides[1] + a_k * a_strides[2]
-            ]
+            # Store into shared memory on thread_idx
+            a_position = batch * a_batch_stride + i * a_strides[1] + a_k * a_strides[2]
+            a_shared[tx, ty] = a_storage[a_position]
 
+        # Calculate the position of a_b
         b_k = start + tx
         
         if b_k < K and j < N:
-            b_shared[tx, ty] = b_storage[
-                batch * b_batch_stride + b_k * b_strides[1] + j * b_strides[2]
-            ]
+            # Store into shared memory based on thread_idx
+            b_position = batch * b_batch_stride + b_k * b_strides[1] + j * b_strides[2]
+            b_shared[tx, ty] = b_storage[b_position]
 
         cuda.syncthreads()
 
         for k in range(BLOCK_DIM):
+            # save guarding
             if start + k < K:
+                # dot product
                 temp += a_shared[tx, k] * b_shared[k, ty]
 
     if i < M and j < N:
-        out[batch * out_strides[0] + i * out_strides[1] + j * out_strides[2]] = temp
+        # global storage into out
+        out_position = batch * out_strides[0] + i * out_strides[1] + j * out_strides[2]
+        out[out_position] = temp
 
 
 tensor_matrix_multiply = jit(_tensor_matrix_multiply)
